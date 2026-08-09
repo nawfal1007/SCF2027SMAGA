@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCF 2027 — Portal BPI & Divisi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .active-tab {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950">
+        <div class="glass-card w-full max-w-md p-8 rounded-2xl shadow-2xl text-center border border-slate-800">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-500 mb-6 font-extrabold text-2xl border border-blue-500/30">
+                SCF
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-2">Selamat Datang Panitia!</h1>
+            <p class="text-slate-400 text-sm mb-6">Portal Resmi BPI & Divisi SCF 2027. Masukkan akun untuk melanjutkan.</p>
+
+            <form id="login-form" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username</label>
+                    <input type="text" id="username" placeholder="Masukkan username" required
+                        class="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Password</label>
+                    <input type="password" id="password" placeholder="Masukkan password" required
+                        class="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                </div>
+
+                <div id="login-error" class="hidden p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium text-center">
+                    Username atau Password salah, silakan coba lagi!
+                </div>
+
+                <button type="submit" 
+                    class="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition duration-200">
+                    Masuk Portal
+                </button>
+            </form>
+            <p class="mt-6 text-xs text-slate-500">BPI SCF 2027 — SMAN 3 Lamongan</p>
+        </div>
+    </div>
+
+    <div id="offer-modal" class="fixed inset-0 z-40 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-card w-full max-w-lg p-6 md:p-8 rounded-2xl shadow-2xl border border-emerald-500/30 bg-slate-900/90">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                <h2 class="text-lg font-bold text-emerald-400">Penawaran BPI — Dana Operasional Awal</h2>
+            </div>
+            
+            <div class="space-y-3 text-slate-300 text-sm leading-relaxed mb-6">
+                <p>
+                    Dikarenakan saat ini belum ada pemasukan kas, untuk meng-cover kebutuhan biaya operasional selama 2 bulan (September–Oktober), setiap panitia dimohon membayarkan iuran operasional sebesar <strong>Rp5.000 / bulan</strong>.
+                </p>
+                <div class="p-3 rounded-xl bg-emerald-950/50 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
+                    Total Rp10.000 (2 bulan) ini akan diganti/dijadikan diskon Iuran Alumni. Dari tarif normal Rp25.000, panitia nantinya hanya perlu bayar <strong>Rp15.000</strong>!
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="https://forms.google.com" target="_blank"
+                    class="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs text-center shadow-lg shadow-emerald-600/20 transition">
+                    Isi Voting Disini
+                </a>
+                <button id="btn-proceed-main"
+                    class="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs text-center border border-slate-700 transition">
+                    Lanjut ke Page Utama
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-dashboard" class="hidden min-h-screen flex flex-col">
+        
+        <header class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-30 backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-600/30">
+                        SCF
+                    </div>
+                    <div>
+                        <h1 class="text-base font-bold text-white leading-tight">Smada Campus Festival 2027</h1>
+                        <p class="text-xs text-slate-400">Dashboard LPJ & KAK Kerja September–Oktober</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="https://forms.google.com" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg border border-emerald-500/30 transition">
+                        🗳️ Form Voting
+                    </a>
+                    <button id="btn-logout" class="text-xs font-semibold text-slate-400 hover:text-red-400 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-red-500/30 transition">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full space-y-8">
+
+            <div class="p-6 rounded-2xl glass-card border border-blue-500/20 bg-gradient-to-r from-blue-900/20 to-slate-900">
+                <h2 class="text-xl font-extrabold text-white mb-1">Halo, <span id="display-user" class="text-blue-400 capitalize"></span>! 👋</h2>
+                <p class="text-slate-400 text-sm">Pilih divisi di bawah untuk melihat rincian peran, tanggung jawab, dan linimasa kerja selama 2 bulan (September–Oktober).</p>
+            </div>
+
+            <div class="p-4 rounded-xl glass-card border border-amber-500/30 bg-amber-950/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3 text-left">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg border border-amber-500/30 shrink-0">
+                        🗳️
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-amber-300">Belum atau Lupa Isi Form Voting Iuran Operasional BPI?</h4>
+                        <p class="text-xs text-slate-400">Suaramu penting untuk kesepakatanbersama iuran pra-acara Rp5.000/bulan (diskon Iuran Alumni).</p>
+                    </div>
+                </div>
+                <a href="https://forms.google.com" target="_blank"
+                    class="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs text-center shadow-lg shadow-amber-600/20 transition shrink-0">
+                    Klik Disini Untuk Isi Voting
+                </a>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Pilih Divisi</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button onclick="switchTab('humas')" id="tab-humas" 
+                        class="p-4 rounded-xl border border-slate-800 bg-slate-900 hover:border-slate-700 text-slate-300 font-bold text-sm text-left transition duration-200">
+                        Divisi Humas
+                    </button>
+                    <button onclick="switchTab('acara')" id="tab-acara" 
+                        class="p-4 rounded-xl border border-slate-800 bg-slate-900 hover:border-slate-700 text-slate-300 font-bold text-sm text-left transition duration-200">
+                        Divisi Acara
+                    </button>
+                    <button onclick="switchTab('pdd')" id="tab-pdd" 
+                        class="p-4 rounded-xl border border-slate-800 bg-slate-900 hover:border-slate-700 text-slate-300 font-bold text-sm text-left transition duration-200">
+                        Divisi PDD
+                    </button>
+                    <button onclick="switchTab('sponsorship')" id="tab-sponsorship" 
+                        class="p-4 rounded-xl border border-slate-800 bg-slate-900 hover:border-slate-700 text-slate-300 font-bold text-sm text-left transition duration-200">
+                        Divisi Sponsorship
+                    </button>
+                </div>
+            </div>
+
+            <div id="division-content" class="glass-card rounded-2xl p-6 md:p-8 space-y-6">
+                </div>
+
+            <div class="glass-card rounded-2xl p-6 md:p-8 border border-emerald-500/20">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold text-emerald-400">RAB Operasional Pra-Acara (2 Bulan)</h3>
+                    <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">27 Panitia x Rp10.000 = Rp270.000</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="py-3 px-4">Pos Pengeluaran</th>
+                                <th class="py-3 px-4">Rincian Deskripsi</th>
+                                <th class="py-3 px-4 text-right">Biaya</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/50">
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-white">Bahan Cetak Proposal (30 Pcs)</td>
+                                <td class="py-3 px-4">1 ream HVS A4, tinta printer panitia, 30 map/jilid mika clip</td>
+                                <td class="py-3 px-4 text-right font-semibold text-emerald-400">Rp135.000</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-white">Materai 10.000 (Secukupnya)</td>
+                                <td class="py-3 px-4">3 lembar untuk pengesahan berkas & MoU vendor besar</td>
+                                <td class="py-3 px-4 text-right font-semibold text-emerald-400">Rp30.000</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-white">Bensin & Mobilitas Lobi</td>
+                                <td class="py-3 px-4">Ditanggung mandiri oleh panitia bersangkutan (Dihapus dari kas)</td>
+                                <td class="py-3 px-4 text-right font-semibold text-slate-500">Rp0</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-bold text-white">Dana Cadangan Kas BPI</td>
+                                <td class="py-3 px-4">Pegangan terpusat di Bendahara BPI untuk tak terduga (cetak revisi)</td>
+                                <td class="py-3 px-4 text-right font-semibold text-emerald-400">Rp105.000</td>
+                            </tr>
+                            <tr class="bg-slate-900/90 font-bold text-white">
+                                <td colspan="2" class="py-3 px-4 text-right uppercase">Total Kas Balans</td>
+                                <td class="py-3 px-4 text-right text-emerald-400">Rp270.000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="p-8 rounded-2xl glass-card border border-blue-500/30 bg-gradient-to-br from-slate-900 via-blue-950/20 to-slate-900 text-center space-y-4">
+                <h3 class="text-lg font-bold text-white">Dokumen Master PDF (KAK, LPJ, & RAB)</h3>
+                <p class="text-slate-400 text-xs max-w-xl mx-auto">Klik tombol di bawah ini untuk membuka atau mengunduh berkas lengkap Master File PDF yang berisi acuan kerja, LPJ 2 bulan, dan rincian RAB resmi.</p>
+                <div>
+                    <a href="Draf_KAK_dan_LPJ_SCF2027.pdf" target="_blank"
+                        class="inline-flex items-center gap-2 py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition duration-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Buka Master File PDF (Acuan Utama)
+                    </a>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="border-t border-slate-800 bg-slate-950 py-6 text-center text-xs text-slate-500">
+            Smada Campus Festival 2027 — Designed for BPI & Tim Panitia
+        </footer>
+    </div>
+
+    <script>
+        // Data Per Divisi & Linimasa 2 Bulan
+        const divisionData = {
+            humas: {
+                title: "Divisi Humas (Hubungan Masyarakat)",
+                desc: "Memegang kendali birokrasi alumni kampus, pengawalan surat perizinan, dan pelaksanaan Technical Meeting (TM).",
+                fokus: [
+                    "Mengolah Master Data Alumni Angkatan 25 & membuat grup WA per universitas.",
+                    "Merangkum catatan aturan birokrasi kampus untuk disampaikan ke Sekretaris BPI.",
+                    "Memegang alur komunikasi & pelaksanaan Technical Meeting (TM) Kampus.",
+                    "Mendistribusikan Surat Pengantar/Subsidi ke PIC kampus, melakukan pengawalan komunikasi, serta mencatat perkembangan birokrasi."
+                ],
+                output: [
+                    "Grup WA Alumni Angkatan 25 aktif.",
+                    "Catatan aturan birokrasi kampus untuk Sekretaris BPI.",
+                    "Terlaksananya TM PIC Kampus.",
+                    "Rekapitulasi database status birokrasi & kontak PIC kampus terpusat."
+                ],
+                schedule: [
+                    { date: "1 – 3 Sept", task: "Menerima data alumni Angkatan 25 dari BPI & mulai membuat grup WA per univ." },
+                    { date: "12 – 14 Sept", task: "Merapikan catatan syarat birokrasi kampus untuk Sekretaris BPI." },
+                    { date: "15 – 21 Sept", task: "Menyerahkan catatan birokrasi ke BPI & mengundang PIC kampus untuk TM." },
+                    { date: "25 Sept", task: "Pelaksanaan Technical Meeting (TM) PIC Kampus secara online." },
+                    { date: "1 – 3 Okt", task: "Menerima Surat Pengantar/Subsidi dari BPI & distribusi ke PIC kampus." },
+                    { date: "4 – 7 Okt", task: "Pengawalan komunikasi surat birokrasi kampus secara berkala." },
+                    { date: "22 – 25 Okt", task: "Merapikan database kontak PIC kampus dalam spreadsheet terpusat." }
+                ]
+            },
+            acara: {
+                title: "Divisi Acara",
+                desc: "Merancang lanskap kegiatan, konsep pemateri di masjid, skema booth alumni, dan alur pergerakan siswa.",
+                fokus: [
+                    "Merumuskan 2–3 draf opsi Tema Besar beserta filosofinya untuk disahkan dalam forum BPI.",
+                    "Menyusun draf Rundown Makro (alokasi pemateri masjid & booth alumni) dan alur pergerakan siswa (Visitor Flow).",
+                    "Menyusun draf TOR MC, Moderator, dan Talent sebagai acuan awal.",
+                    "Menyiapkan materi paparan alur kegiatan untuk TM Kampus & draf Contingency Plan."
+                ],
+                output: [
+                    "Draf opsi Tema Besar & Dokumen Rundown Makro.",
+                    "Peta Alur Pergerakan Siswa (Visitor Flow).",
+                    "Draf TOR MC/Moderator/Talent.",
+                    "Materi paparan TM Kampus & Draf Rencana Cadangan."
+                ],
+                schedule: [
+                    { date: "1 – 3 Sept", task: "Merumuskan 2–3 draf opsi Tema Besar & draf Rundown Makro V1." },
+                    { date: "4 – 5 Sept", task: "Pembahasan & Penetapan Resmi Tema Besar bersama BPI." },
+                    { date: "8 – 11 Sept", task: "Diskusi pemetaan spot sekolah bersama PDD, Sponsorship, & Humas." },
+                    { date: "15 – 21 Sept", task: "Menyusun draf TOR MC/Moderator/Talent." },
+                    { date: "22 – 24 Sept", task: "Menyiapkan materi paparan TM Kampus & draf Contingency Plan." },
+                    { date: "25 Sept", task: "Mendampingi pelaksanaan TM Kampus bersama Humas." },
+                    { date: "15 – 21 Okt", task: "Mematangkan lanskap umum acara & alur pergerakan siswa." }
+                ]
+            },
+            pdd: {
+                title: "Divisi PDD (Publikasi, Dekorasi, & Dokumentasi)",
+                desc: "Mengelola identitas visual branding, akun media sosial, draf poster digital, dan visual denah lokasi.",
+                fokus: [
+                    "Menentukan panduan visual (pilihan warna, font, tone) berdasarkan Tema Besar resmi.",
+                    "Mematangkan konsepsi visual branding, draf ID Card, & poster pendataan Maba/Oprec.",
+                    "Mengaktifkan akun Instagram & merilis poster penanda kehadiran SCF 2027.",
+                    "Menyusun draf aset digital rutin & content calendar postingan."
+                ],
+                output: [
+                    "Panduan visual branding & identitas desain SCF 2027.",
+                    "Akun Instagram aktif & terisi poster publikasi awal.",
+                    "Draf visual denah lokasi acara & aset digital Oprec.",
+                    "Content calendar & folder arsip aset teratur."
+                ],
+                schedule: [
+                    { date: "1 – 3 Sept", task: "Eksplorasi pilihan warna, font, & panduan visual dasar." },
+                    { date: "6 – 7 Sept", task: "Mendata kebutuhan media cetak & dekorasi internal." },
+                    { date: "15 – 21 Sept", task: "Aktivasi Instagram & unggah poster penanda kehadiran SCF 2027." },
+                    { date: "22 – 24 Sept", task: "Membuat draf visual denah / peta lokasi acara untuk TM." },
+                    { date: "26 – 30 Sept", task: "Menyusun content calendar postingan media sosial bulan Oktober." },
+                    { date: "4 – 7 Okt", task: "Menyusun draf poster digital publikasi Oprec/pendataan Maba." }
+                ]
+            },
+            sponsorship: {
+                title: "Divisi Sponsorship",
+                desc: "Menggalang kemitraan vendor/sponsor eksternal melalui listing database dan outreach resmi terukur.",
+                fokus: [
+                    "Merancang draf paket benefit, Proposal Sponsorship V1, & draf MoU.",
+                    "Mengumpulkan database listing vendor (~60 list/bulan dari skema 5 anggota x 1-3 vendor/minggu).",
+                    "Outreach resmi: Sept (2 minggu aktif = target ~10 vendor) & Okt (4 minggu aktif = target ~20 vendor).",
+                    "Screening kelayakan vendor & mencatat respon di tracking sheet."
+                ],
+                output: [
+                    "Draf Proposal Sponsorship V1 & Template MoU siap sebar.",
+                    "Database Listing Vendor (~120 list akumulasi 2 bulan).",
+                    "Target Penjangkauan Resmi (~10 vendor Sept & ~20 vendor Okt).",
+                    "Tracking sheet status respon vendor terpusat."
+                ],
+                schedule: [
+                    { date: "1 – 3 Sept", task: "Menyusun draf ide benefit & struktur Proposal Sponsorship V1." },
+                    { date: "6 – 7 Sept", task: "Mengumpulkan listing vendor M1 (5 anggota x 1-3 vendor/minggu)." },
+                    { date: "12 – 14 Sept", task: "Penguncian file digital Proposal Sponsorship V1 & MoU." },
+                    { date: "15 – 21 Sept", task: "Screening vendor & mulai outreach resmi siklus Sept (target ~10 vendor)." },
+                    { date: "1 – 3 Okt", task: "Melanjutkan outreach resmi siklus Oktober (4 minggu = target ~20 vendor)." },
+                    { date: "22 – 25 Okt", task: "Merapikan tracking sheet & rekap respon vendor (~30 total outreach)." }
+                ]
+            }
+        };
+
+        // DOM Elements
+        const loginScreen = document.getElementById('login-screen');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const offerModal = document.getElementById('offer-modal');
+        const mainDashboard = document.getElementById('main-dashboard');
+        const displayUser = document.getElementById('display-user');
+        const divisionContent = document.getElementById('division-content');
+        const btnProceedMain = document.getElementById('btn-proceed-main');
+        const btnLogout = document.getElementById('btn-logout');
+
+        // Login Handler
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const userVal = document.getElementById('username').value.trim();
+            const passVal = document.getElementById('password').value.trim();
+
+            if (userVal === 'orang ganteng' && passVal === 'exposukses123') {
+                loginError.classList.add('hidden');
+                displayUser.textContent = userVal;
+                loginScreen.classList.add('hidden');
+                // Show Offer Modal
+                offerModal.classList.remove('hidden');
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        // Proceed to Main Dashboard from Offer Modal
+        btnProceedMain.addEventListener('click', () => {
+            offerModal.classList.add('hidden');
+            mainDashboard.classList.remove('hidden');
+            switchTab('humas'); // Default tab
+        });
+
+        // Logout Handler
+        btnLogout.addEventListener('click', () => {
+            mainDashboard.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        });
+
+        // Switch Tab Functionality
+        function switchTab(divKey) {
+            // Update active styles
+            ['humas', 'acara', 'pdd', 'sponsorship'].forEach(key => {
+                const btn = document.getElementById(`tab-${key}`);
+                if (key === divKey) {
+                    btn.classList.add('active-tab');
+                } else {
+                    btn.classList.remove('active-tab');
+                }
+            });
+
+            const data = divisionData[divKey];
+
+            // Render Division HTML
+            divisionContent.innerHTML = `
+                <div class="border-b border-slate-800 pb-4">
+                    <h2 class="text-xl font-black text-white mb-1">${data.title}</h2>
+                    <p class="text-slate-400 text-xs">${data.desc}</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider">Fokus / Tanggung Jawab Utama</h4>
+                        <ul class="list-disc list-inside text-xs text-slate-300 space-y-1.5 leading-relaxed">
+                            ${data.fokus.map(f => `<li>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                        <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Hasil Kerja (Output Formal)</h4>
+                        <ul class="list-disc list-inside text-xs text-slate-300 space-y-1.5 leading-relaxed">
+                            ${data.output.map(o => `<li>${o}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Linimasa Penjadwalan Kerja (September–Oktober)</h4>
+                    <div class="space-y-2">
+                        ${data.schedule.map(s => `
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-900/40 border border-slate-800/80 hover:border-slate-700 transition">
+                                <span class="text-xs font-bold text-blue-400 sm:w-1/4">${s.date}</span>
+                                <span class="text-xs text-slate-300 sm:w-3/4">${s.task}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
