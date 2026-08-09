@@ -147,7 +147,7 @@
                 </div>
                 <div>
                     <label class="block text-xs mono text-cyan-400 uppercase tracking-widest mb-1">> ACCESS_CODE</label>
-                    <input type="password" id="password" placeholder="scfsmaga2027" required
+                    <input type="password" id="password" placeholder="••••••••••••" required
                         onfocus="playSFX('hover')"
                         class="w-full px-4 py-2.5 bg-black/80 border border-cyan-500/40 text-cyan-300 mono text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-400 transition">
                 </div>
@@ -205,7 +205,7 @@
                         SCF
                     </div>
                     <div>
-                        <h1 class="text-sm font-black text-white tracking-wider">SMADA CAMPUS FESTIVAL 2027</h1>
+                        <h1 class="text-sm font-black text-white tracking-wider">SMAGA CAMPUS FESTIVAL 2027</h1>
                         <p class="text-[10px] mono text-cyan-400/80">SYSTEM_STATUS // ACTIVE_PRE_EVENT</p>
                     </div>
                 </div>
@@ -258,7 +258,7 @@
                         // LIVE_FEED // VIDEO_LOOP_DISPLAY
                     </div>
                     <div class="absolute bottom-3 left-3 text-white mono text-xs font-bold drop-shadow-md">
-                        SMADA CAMPUS FESTIVAL 2027 // AMBIENT VISUAL
+                        SMAGA CAMPUS FESTIVAL 2027 // AMBIENT VISUAL
                     </div>
                     <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-cyan-400"></div>
                     <div class="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-cyan-400"></div>
@@ -375,31 +375,25 @@
     </div>
 
     <script>
-        // DAFTAR USERNAME PANITIA TERDAFTAR (LOWERCASE)
         const validUsers = [
-            // Divisi Acara
             "fany fristy purwardani",
             "moses farel cristian",
             "arzaqiv faizal",
             "chandra mahendra alam pramudita",
             "sinta ayu anggraini",
-            // Divisi Sponsorship
             "ahmad reza bagus saputra",
             "m. fathur rizqi",
             "rama affrisco soelistyo",
-            // Divisi PDD
             "yurifa aina dwi syahrani",
             "sholahudin ahmad al majid",
             "ahmad baihaqi",
             "muhammad afif raihan hanif",
             "eucharistie gabriela suryani pranadi",
-            // Divisi Humas
             "rizqi lazuardi",
             "elisa khoirul jannah",
             "marwah fadlilatun kamilah",
             "indy dwi mustika",
             "annisa nailatul izzah",
-            // Akses Tambahan
             "internal"
         ];
 
@@ -454,7 +448,6 @@
             } catch (e) {}
         }
 
-        // BGM Controller
         function toggleBGM() {
             const bgm = document.getElementById('bgm-player');
             const eq = document.getElementById('eq-container');
@@ -650,14 +643,14 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="p-4 bg-black/60 border border-cyan-500/20 space-y-2">
-                        <h4 class="text-xs mono font-bold text-cyan-400 uppercase tracking-widest font-semibold">> FOKUS / TANGGUNG JAWAB UTAMA</h4>
+                        <h4 class="text-xs mono font-bold text-cyan-400 uppercase tracking-widest font-black font-semibold">> FOKUS / TANGGUNG JAWAB UTAMA</h4>
                         <ul class="list-disc list-inside text-xs text-slate-300 space-y-1.5 leading-relaxed">
                             ${data.fokus.map(f => `<li>${f}</li>`).join('')}
                         </ul>
                     </div>
 
                     <div class="p-4 bg-black/60 border border-pink-500/20 space-y-2">
-                        <h4 class="text-xs mono font-bold text-pink-400 uppercase tracking-widest font-semibold">> HASIL KERJA (OUTPUT FORMAL)</h4>
+                        <h4 class="text-xs mono font-bold text-pink-400 uppercase tracking-widest font-black font-semibold">> HASIL KERJA (OUTPUT FORMAL)</h4>
                         <ul class="list-disc list-inside text-xs text-slate-300 space-y-1.5 leading-relaxed">
                             ${data.output.map(o => `<li>${o}</li>`).join('')}
                         </ul>
@@ -665,7 +658,7 @@
                 </div>
 
                 <div class="space-y-3 pt-2">
-                    <h4 class="text-xs mono font-bold text-slate-400 uppercase tracking-widest font-semibold">> LINIMASA KERJA & JADWAL KOLABORASI (SEPTEMBER–OKTOBER)</h4>
+                    <h4 class="text-xs mono font-bold text-slate-400 uppercase tracking-widest font-black font-semibold">> LINIMASA KERJA & JADWAL KOLABORASI (SEPTEMBER–OKTOBER)</h4>
                     <div class="space-y-2">
                         ${data.schedule.map(s => `
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 bg-black/40 border border-slate-800 hover:border-cyan-500/40 transition">
