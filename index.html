@@ -199,7 +199,7 @@
             </div>
 
             <div class="flex flex-col sm:flex-row gap-3">
-                <a href="https://forms.google.com" target="_blank" onmouseenter="playSFX('hover')" onclick="playSFX('click')"
+                <a href="https://forms.gle/2LDaYjJDc5FG3UBF8" target="_blank" onmouseenter="playSFX('hover')" onclick="playSFX('click')"
                     class="cyber-btn cyber-btn-pink flex-1 py-3 px-4 bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs text-center tracking-wider uppercase transition">
                     [ SUBMIT_VOTING ]
                 </a>
@@ -262,7 +262,7 @@
                         <span id="bgm-status-text" class="text-cyan-400">[ BGM // OFF ]</span>
                     </button>
 
-                    <a href="https://forms.google.com" target="_blank" onmouseenter="playSFX('hover')" onclick="playSFX('click')" 
+                    <a href="https://forms.gle/2LDaYjJDc5FG3UBF8" target="_blank" onmouseenter="playSFX('hover')" onclick="playSFX('click')" 
                         class="hidden sm:inline-flex items-center text-xs mono font-bold text-pink-400 bg-pink-950/40 hover:bg-pink-900/60 px-3 py-1.5 border border-pink-500/40 transition">
                         [ VOTING_LINK ]
                     </a>
@@ -311,7 +311,7 @@
                     <h4 class="text-sm font-bold text-pink-300">LUPA ATAU BELUM MENGISI FORM VOTING IURAN OPERASIONAL?</h4>
                     <p class="text-xs text-slate-400 mono">Suaramu diperlukan untuk mengunci kesepakatan iuran pra-acara Rp5.000/bulan.</p>
                 </div>
-                <a href="https://forms.google.com" target="_blank" onmouseenter="playSFX('hover')" onclick="playSFX('click')"
+                <a href="https://forms.gle/2LDaYjJDc5FG3UBF8" target="_blank" onmouseenter="playSFX('hover')" onclick="playSFX('click')"
                     class="cyber-btn cyber-btn-pink w-full sm:w-auto py-2 px-4 bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs uppercase tracking-wider text-center shrink-0">
                     [ ISI VOTING SEKARANG ]
                 </a>
@@ -464,7 +464,6 @@
         const targetPasswordText = "scfsmaga2027";
         let autoTypeTimer = null;
 
-        // ANIMASI AUTOMATIC TYPING PASSWORD SATU-PER-SATU
         function handleUsernameInput() {
             const userVal = document.getElementById('username').value.trim().toLowerCase();
             const passInput = document.getElementById('password');
@@ -747,7 +746,6 @@
             }
         });
 
-        // BUKA BGM CONFIRMATION MODAL DAHULU SEBELUM DASHBOARD
         btnProceedToBgm.addEventListener('click', () => {
             offerModal.classList.add('hidden');
             bgmModal.classList.remove('hidden');
