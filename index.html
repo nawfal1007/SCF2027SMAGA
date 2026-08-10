@@ -183,7 +183,7 @@
         <div class="cyber-tile-pink w-full max-w-lg p-6 md:p-8 relative">
             <div class="flex items-center gap-2 mb-3">
                 <span class="w-2 h-2 bg-pink-500 animate-ping rounded-full"></span>
-                <span class="mono text-xs text-pink-400 tracking-widest uppercase glow-pink">[ NOTICE_ALERT ] BPI OPERATIONAL FUND</span>
+                <span class="mono text-xs text-pink-400 tracking-widest uppercase glow-pink">[ NOTICE_ALERT // STEP 1 ] BPI OPERATIONAL FUND</span>
             </div>
             
             <h2 class="text-xl font-bold text-white mb-3 tracking-wide">PENAWARAN IURAN OPERASIONAL PRA-ACARA</h2>
@@ -203,9 +203,34 @@
                     class="cyber-btn cyber-btn-pink flex-1 py-3 px-4 bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs text-center tracking-wider uppercase transition">
                     [ SUBMIT_VOTING ]
                 </a>
-                <button id="btn-proceed-main" onmouseenter="playSFX('hover')" onclick="playSFX('click')"
+                <button id="btn-proceed-to-bgm" onmouseenter="playSFX('hover')" onclick="playSFX('click')"
                     class="cyber-btn flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold text-xs text-center border border-cyan-500/30 tracking-wider uppercase transition">
-                    [ ENTER_MAIN_SYSTEM ]
+                    [ LANJUTKAN // PROCEED ]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bgm-modal" class="fixed inset-0 z-40 hidden flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg">
+        <div class="cyber-tile w-full max-w-md p-6 md:p-8 relative border-cyan-500/60">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="w-2.5 h-2.5 bg-cyan-400 animate-ping rounded-full"></span>
+                <span class="mono text-xs text-cyan-400 tracking-widest uppercase glow-cyan">[ AUDIO_PROTOCOL // STEP 2 ] BGM PREFERENCE</span>
+            </div>
+            
+            <h2 class="text-xl font-bold text-white mb-2 tracking-wide">AKTIFKAN MUSIK LATAR (BGM)?</h2>
+            <p class="text-slate-400 text-xs mono mb-6">
+                Portal Cyber BPI dilengkapi dengan audio musik latar (Ambient Cyber BGM) untuk memberikan pengalaman atmosferik saat bekerja.
+            </p>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="enableBGMAndProceed()" onmouseenter="playSFX('hover')"
+                    class="cyber-btn py-3 px-4 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs text-center tracking-wider uppercase transition">
+                    🔊 [ AKTIFKAN BGM AUDIO // ENABLE ]
+                </button>
+                <button onclick="disableBGMAndProceed()" onmouseenter="playSFX('hover')"
+                    class="cyber-btn py-3 px-4 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-bold text-xs text-center border border-slate-700 tracking-wider uppercase transition">
+                    🔇 [ MASUK TANPA AUDIO // DISABLE ]
                 </button>
             </div>
         </div>
@@ -448,7 +473,6 @@
             clearTimeout(autoTypeTimer);
 
             if (userVal.length >= 2) {
-                // Cari apakah input user merupakan bagian dari nama panitia mana pun
                 const isMatch = validUsers.some(full => full.includes(userVal));
                 
                 if (isMatch) {
@@ -543,6 +567,34 @@
                 statusText.textContent = "[ BGM // OFF ]";
                 statusText.classList.remove('glow-cyan');
             }
+        }
+
+        function enableBGMAndProceed() {
+            playSFX('click');
+            const bgmModal = document.getElementById('bgm-modal');
+            const mainDashboard = document.getElementById('main-dashboard');
+            const bgm = document.getElementById('bgm-player');
+            const eq = document.getElementById('eq-container');
+            const statusText = document.getElementById('bgm-status-text');
+
+            bgm.play().catch(e => console.log(e));
+            eq.classList.remove('eq-paused');
+            statusText.textContent = "[ BGM // AUDIO_ACTIVE ]";
+            statusText.classList.add('glow-cyan');
+
+            bgmModal.classList.add('hidden');
+            mainDashboard.classList.remove('hidden');
+            switchTab('humas');
+        }
+
+        function disableBGMAndProceed() {
+            playSFX('click');
+            const bgmModal = document.getElementById('bgm-modal');
+            const mainDashboard = document.getElementById('main-dashboard');
+
+            bgmModal.classList.add('hidden');
+            mainDashboard.classList.remove('hidden');
+            switchTab('humas');
         }
 
         const divisionData = {
@@ -661,17 +713,17 @@
         const loginError = document.getElementById('login-error');
         const glitchOverlay = document.getElementById('glitch-overlay');
         const offerModal = document.getElementById('offer-modal');
+        const bgmModal = document.getElementById('bgm-modal');
         const mainDashboard = document.getElementById('main-dashboard');
         const displayUser = document.getElementById('display-user');
         const divisionContent = document.getElementById('division-content');
-        const btnProceedMain = document.getElementById('btn-proceed-main');
+        const btnProceedToBgm = document.getElementById('btn-proceed-to-bgm');
         const btnLogout = document.getElementById('btn-logout');
 
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const userVal = document.getElementById('username').value.trim().toLowerCase();
 
-            // Cek apakah ada kecocokan sebagian nama dengan database 26 panitia
             const matchedFullName = validUsers.find(full => full.includes(userVal));
 
             if (matchedFullName && userVal.length >= 2) {
@@ -679,12 +731,10 @@
                 loginError.classList.add('hidden');
                 displayUser.textContent = matchedFullName;
 
-                // TAMPILKAN TRANSISI EFEK ERROR / GLITCH OVERLAY
                 loginScreen.classList.add('hidden');
                 glitchOverlay.classList.remove('hidden');
                 playSFX('error');
 
-                // TAHAN EFEK ERROR DUA DETIK SEBELUM MASUK SYSTEM
                 setTimeout(() => {
                     glitchOverlay.classList.add('hidden');
                     offerModal.classList.remove('hidden');
@@ -697,10 +747,10 @@
             }
         });
 
-        btnProceedMain.addEventListener('click', () => {
+        // BUKA BGM CONFIRMATION MODAL DAHULU SEBELUM DASHBOARD
+        btnProceedToBgm.addEventListener('click', () => {
             offerModal.classList.add('hidden');
-            mainDashboard.classList.remove('hidden');
-            switchTab('humas');
+            bgmModal.classList.remove('hidden');
         });
 
         btnLogout.addEventListener('click', () => {
