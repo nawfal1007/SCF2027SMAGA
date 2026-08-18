@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Stage Rigging Architectural Model</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0f19; font-family: sans-serif; }
+    #canvas-container { width: 100%; height: 100%; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <script>
+    const container = document.getElementById('canvas-container');
+
+    // 1. Scene, Camera & Renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b0f19');
+    scene.fog = new THREE.FogExp2('#0b0f19', 0.025);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(11, 7, 13);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 2.2, 0);
+    controls.maxPolarAngle = Math.PI / 2 - 0.01;
+    controls.minDistance = 4;
+    controls.maxDistance = 35;
+
+    // 2. Realistic Studio / Outdoor Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfff5ea, 1.4);
+    sunLight.position.set(12, 18, 10);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 1;
+    sunLight.shadow.camera.far = 40;
+    sunLight.shadow.camera.left = -10;
+    sunLight.shadow.camera.right = 10;
+    sunLight.shadow.camera.top = 10;
+    sunLight.shadow.camera.bottom = -10;
+    sunLight.shadow.bias = -0.0003;
+    scene.add(sunLight);
+
+    const skyFill = new THREE.DirectionalLight(0x60a5fa, 0.45);
+    skyFill.position.set(-10, 10, -10);
+    scene.add(skyFill);
+
+    // Ground Grid & Floor
+    const grid = new THREE.GridHelper(24, 24, 0x38bdf8, 0x1e293b);
+    grid.position.y = 0;
+    scene.add(grid);
+
+    const groundGeo = new THREE.PlaneGeometry(50, 50);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x070a13, roughness: 0.95 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.01;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // 3. Materials
+    const aluminumMat = new THREE.MeshStandardMaterial({
+      color: 0xd4d4d8,
+      metalness: 0.85,
+      roughness: 0.28
+    });
+    const blackSkirtMat = new THREE.MeshStandardMaterial({
+      color: 0x111318,
+      roughness: 0.9,
+      metalness: 0.05
+    });
+    const deckMat = new THREE.MeshStandardMaterial({
+      color: 0x1f242d,
+      roughness: 0.6,
+      metalness: 0.15
+    });
+    const roofTarpMat = new THREE.MeshStandardMaterial({
+      color: 0x181a20,
+      roughness: 0.8,
+      metalness: 0.1,
+      side: THREE.DoubleSide
+    });
+    const backdropClothMat = new THREE.MeshStandardMaterial({
+      color: 0x0f1115,
+      roughness: 0.95,
+      side: THREE.DoubleSide
+    });
+
+    // 4. Procedural Aluminum Box-Truss Generator
+    function createBoxTruss(length, size = 0.32, bays = 8) {
+      const group = new THREE.Group();
+      const mainRadius = 0.018;
+      const latticeRadius = 0.008;
+
+      const mainBarGeo = new THREE.CylinderGeometry(mainRadius, mainRadius, length, 8);
+      const halfS = size / 2;
+      const cornerOffsets = [
+        [-halfS, -halfS],
+        [ halfS, -halfS],
+        [ halfS,  halfS],
+        [-halfS,  halfS]
+      ];
+
+      // 4 Main Chords
+      cornerOffsets.forEach(([x, z]) => {
+        const bar = new THREE.Mesh(mainBarGeo, aluminumMat);
+        bar.position.set(x, 0, z);
+        bar.castShadow = true;
+        group.add(bar);
+      });
+
+      // Lattice Diagonals and Crossbraces along bays
+      const bayHeight = length / bays;
+      const halfL = length / 2;
+
+      for (let i = 0; i < bays; i++) {
+        const yBottom = -halfL + (i * bayHeight);
+        const yTop = yBottom + bayHeight;
+        const yMid = (yBottom + yTop) / 2;
+
+        // 4 Sides Zig-Zag Lattice
+        for (let s = 0; s < 4; s++) {
+          const p1 = cornerOffsets[s];
+          const p2 = cornerOffsets[(s + 1) % 4];
+
+          const start = new THREE.Vector3(p1[0], yBottom, p1[1]);
+          const end = (i % 2 === 0) 
+            ? new THREE.Vector3(p2[0], yTop, p2[1]) 
+            : new THREE.Vector3(p1[0], yTop, p1[1]);
+          const nextStart = (i % 2 === 0)
+            ? new THREE.Vector3(p2[0], yBottom, p2[1])
+            : new THREE.Vector3(p1[0], yBottom, p1[1]);
+
+          const diagVec = new THREE.Vector3().subVectors(end, start);
+          const diagLen = diagVec.length();
+          const diagGeo = new THREE.CylinderGeometry(latticeRadius, latticeRadius, diagLen, 6);
+          const diagMesh = new THREE.Mesh(diagGeo, aluminumMat);
+
+          diagMesh.position.copy(start).addScaledVector(diagVec, 0.5);
+          diagMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), diagVec.clone().normalize());
+          diagMesh.castShadow = true;
+          group.add(diagMesh);
+        }
+
+        // Horizontal Perimeter Bracing at each bay joint
+        for (let s = 0; s < 4; s++) {
+          const p1 = cornerOffsets[s];
+          const p2 = cornerOffsets[(s + 1) % 4];
+          const hVec = new THREE.Vector3(p2[0] - p1[0], 0, p2[1] - p1[1]);
+          const hLen = hVec.length();
+          const hGeo = new THREE.CylinderGeometry(latticeRadius, latticeRadius, hLen, 6);
+          const hMesh = new THREE.Mesh(hGeo, aluminumMat);
+          hMesh.position.set((p1[0] + p2[0]) / 2, yTop, (p1[1] + p2[1]) / 2);
+          hMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), hVec.clone().normalize());
+          group.add(hMesh);
+        }
+      }
+
+      return group;
+    }
+
+    // 5. Stage Dimensions Setup (6.0m Width x 4.0m Depth x 0.9m Deck Height)
+    const stageW = 6.0;
+    const stageD = 4.0;
+    const stageH = 0.9;
+    const towerH = 5.2;
+    const trussS = 0.32;
+
+    // Platform Base & Skirting
+    const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(stageW, stageH, stageD), blackSkirtMat);
+    baseMesh.position.set(0, stageH / 2, 0);
+    baseMesh.castShadow = true;
+    baseMesh.receiveShadow = true;
+    scene.add(baseMesh);
+
+    // Stage Top Deck Modular Tiles (6 panels)
+    for (let x = -2; x <= 2; x += 2) {
+      for (let z = -1; z <= 1; z += 2) {
+        const deckTile = new THREE.Mesh(new THREE.BoxGeometry(1.96, 0.03, 1.96), deckMat);
+        deckTile.position.set(x, stageH + 0.015, z * 0.99);
+        deckTile.receiveShadow = true;
+        scene.add(deckTile);
+      }
+    }
+
+    // Front/Side Access Stairs (3 Steps)
+    for (let i = 0; i < 3; i++) {
+      const stepH = 0.225;
+      const sMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, stepH * (i + 1), 0.35), blackSkirtMat);
+      sMesh.position.set(stageW / 2 + 0.2, (stepH * (i + 1)) / 2, 1.2 - (i * 0.35));
+      sMesh.castShadow = true;
+      sMesh.receiveShadow = true;
+      scene.add(sMesh);
+    }
+
+    // 6. 4 Rigging Tower Columns (Vertical 4-Point Box Truss)
+    const posX = (stageW / 2) + 0.25;
+    const posZ = (stageD / 2) + 0.25;
+    const colCoords = [
+      [-posX, posZ],
+      [ posX, posZ],
+      [-posX, -posZ],
+      [ posX, -posZ]
+    ];
+
+    colCoords.forEach(([x, z]) => {
+      // Column Base Outrigger Plates
+      const basePlate = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.7), aluminumMat);
+      basePlate.position.set(x, 0.04, z);
+      basePlate.castShadow = true;
+      scene.add(basePlate);
+
+      // Diagonal Stabilizer Outrigger Arms
+      const outArmGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+      const outArm = new THREE.Mesh(outArmGeo, aluminumMat);
+      outArm.position.set(x + (Math.sign(x) * 0.35), 0.45, z + (Math.sign(z) * 0.35));
+      outArm.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(Math.sign(x) * 0.5, -0.6, Math.sign(z) * 0.5).normalize()
+      );
+      scene.add(outArm);
+
+      // Vertical Truss Column
+      const columnTruss = createBoxTruss(towerH, trussS, 10);
+      columnTruss.position.set(x, towerH / 2, z);
+      scene.add(columnTruss);
+    });
+
+    // 7. Roof Box-Truss Perimeter Grid
+    const roofBeamY = towerH - 0.2;
+    const roofSpanW = (posX * 2);
+    const roofSpanD = (posZ * 2);
+
+    // Front & Back Horizontal Beams
+    [-posZ, posZ].forEach(z => {
+      const beam = createBoxTruss(roofSpanW, trussS, 12);
+      beam.rotation.z = Math.PI / 2;
+      beam.position.set(0, roofBeamY, z);
+      scene.add(beam);
+    });
+
+    // Left & Right Horizontal Beams
+    [-posX, posX].forEach(x => {
+      const beam = createBoxTruss(roofSpanD, trussS, 8);
+      beam.rotation.x = Math.PI / 2;
+      beam.position.set(x, roofBeamY, 0);
+      scene.add(beam);
+    });
+
+    // 8. Pitched Roof Truss Gable & Canopy (Tenda Limas / Segitiga Rigging)
+    const roofApexY = roofBeamY + 1.2;
+
+    // Center Ridge Pole Box Truss
+    const ridgeTruss = createBoxTruss(roofSpanW, 0.25, 12);
+    ridgeTruss.rotation.z = Math.PI / 2;
+    ridgeTruss.position.set(0, roofApexY, 0);
+    scene.add(ridgeTruss);
+
+    // Rafter Struts connecting Apex to 4 Corners
+    colCoords.forEach(([x, z]) => {
+      const rafterVec = new THREE.Vector3(x, roofBeamY, z).sub(new THREE.Vector3(x, roofApexY, 0));
+      const rafterLen = rafterVec.length();
+      const rafterMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, rafterLen, 8),
+        aluminumMat
+      );
+      rafterMesh.position.set(x, (roofApexY + roofBeamY) / 2, z / 2);
+      rafterMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), rafterVec.normalize());
+      scene.add(rafterMesh);
+    });
+
+    // Realistic Taut Roof Tarp Panels
+    const roofShapeLeft = new THREE.BufferGeometry();
+    const vLeft = new Float32Array([
+      -posX, roofBeamY + 0.1, -posZ,
+       posX, roofBeamY + 0.1, -posZ,
+       posX, roofApexY + 0.05, 0,
+      -posX, roofBeamY + 0.1, -posZ,
+       posX, roofApexY + 0.05, 0,
+      -posX, roofApexY + 0.05, 0
+    ]);
+    roofShapeLeft.setAttribute('position', new THREE.BufferAttribute(vLeft, 3));
+    roofShapeLeft.computeVertexNormals();
+    const roofMeshL = new THREE.Mesh(roofShapeLeft, roofTarpMat);
+    roofMeshL.castShadow = true;
+    scene.add(roofMeshL);
+
+    const roofShapeRight = new THREE.BufferGeometry();
+    const vRight = new Float32Array([
+      -posX, roofApexY + 0.05, 0,
+       posX, roofApexY + 0.05, 0,
+       posX, roofBeamY + 0.1, posZ,
+      -posX, roofApexY + 0.05, 0,
+       posX, roofBeamY + 0.1, posZ,
+      -posX, roofBeamY + 0.1, posZ
+    ]);
+    roofShapeRight.setAttribute('position', new THREE.BufferAttribute(vRight, 3));
+    roofShapeRight.computeVertexNormals();
+    const roofMeshR = new THREE.Mesh(roofShapeRight, roofTarpMat);
+    roofMeshR.castShadow = true;
+    scene.add(roofMeshR);
+
+    // 9. Rear Stage Drape / Triangular Black Banners (Like Image)
+    const backdropPanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(stageW - 0.2, roofBeamY - stageH - 0.1),
+      backdropClothMat
+    );
+    backdropPanel.position.set(0, stageH + (roofBeamY - stageH) / 2, -stageD / 2 + 0.1);
+    backdropPanel.receiveShadow = true;
+    scene.add(backdropPanel);
+
+    // Responsive Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Render Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
