@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketsa 3D Layout Lapangan Expo (Enhanced Visual Blue Welcome Gate)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #canvas-container { width: 100%; height: 100%; }
+
+    /* Kompas Mata Angin Grafis UI Clean */
+    .compass-hud {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 110px;
+      height: 110px;
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 50%;
+      border: 2px solid #00f3ff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .compass-hud svg {
+      width: 100px;
+      height: 100px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <!-- Widget Simbol Kompas Mata Angin -->
+  <div class="compass-hud">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="44" stroke="#334155" stroke-width="1.5" fill="none" />
+      <circle cx="50" cy="50" r="38" stroke="#0284c7" stroke-width="0.8" stroke-dasharray="2,2" fill="none" />
+      
+      <!-- Jarum UTARA (Atas / -Z / Arah Lapangan) -->
+      <polygon points="50,14 44,50 50,50" fill="#38bdf8" />
+      <polygon points="50,14 56,50 50,50" fill="#0284c7" />
+      
+      <!-- Jarum SELATAN (Bawah / +Z / Gedung) -->
+      <polygon points="50,86 44,50 50,50" fill="#f43f5e" />
+      <polygon points="50,86 56,50 50,50" fill="#be123c" />
+
+      <!-- Jarum TIMUR (Kiri / -X / Perpus & Taman) -->
+      <polygon points="14,50 50,44 50,50" fill="#facc15" />
+      <polygon points="14,50 50,56 50,50" fill="#ca8a04" />
+
+      <!-- Jarum BARAT (Kanan / +X / Terop Stand) -->
+      <polygon points="86,50 50,44 50,50" fill="#00f3ff" />
+      <polygon points="86,50 50,56 50,50" fill="#0891b2" />
+
+      <!-- Titik Pusat -->
+      <circle cx="50" cy="50" r="3.5" fill="#f8fafc" />
+      
+      <!-- Label Mata Angin -->
+      <text x="50" y="11" fill="#38bdf8" font-size="10" font-weight="900" text-anchor="middle">U</text>
+      <text x="50" y="97" fill="#f43f5e" font-size="10" font-weight="900" text-anchor="middle">S</text>
+      <text x="7" y="53.5" fill="#facc15" font-size="10" font-weight="900" text-anchor="middle">T</text>
+      <text x="93" y="53.5" fill="#00f3ff" font-size="10" font-weight="900" text-anchor="middle">B</text>
+    </svg>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <script>
+    const container = document.getElementById('canvas-container');
+
+    // 1. Scene & Camera Setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b0f19');
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(-6, 48, 54);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(-3, 2, 0.5);
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+    // 2. Lighting Setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.35);
+    dirLight.position.set(25, 42, 28);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.45);
+    fillLight.position.set(-30, 20, -20);
+    scene.add(fillLight);
+
+    // Floor Grid Lapangan
+    const grid = new THREE.GridHelper(70, 70, 0x00f3ff, 0x1e293b);
+    grid.position.y = 0.001;
+    scene.add(grid);
+
+    // 3. Materials
+    const matField = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    const matPlazaPath = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+    const matBuildingWall = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+    const matBuildingCorridor = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
+    const matRoof = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7, side: THREE.DoubleSide });
+    const matGlassWindow = new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.55, roughness: 0.2 });
+    const matPillar = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.4 });
+    const matPodiumIntegrated = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 });
+    const matRedCarpet = new THREE.MeshStandardMaterial({ color: 0xbe123c, roughness: 0.8 });
+    const matCardboardKraft = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.9 });
+    const matTentRoof = new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.35, roughness: 0.3, side: THREE.DoubleSide });
+    const matTable = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5 });
+    const matTentFrame = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 1.5 });
+
+    // Material Panggung & Speaker
+    const matStageFloor = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6, metalness: 0.1 });
+    const matStageSkirt = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.9 });
+    const matSpeaker = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+
+    // Material Kayu & Rangka
+    const matWoodKaso = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.75 });
+    const matWoodFrameBack = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.8 });
+    const matSupportWood = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 });
+
+    // Material Welcome Gate Enhanced (Blue Edition)
+    const matGateStructure = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4, metalness: 0.2 });
+    const matGateTrim = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3, metalness: 0.5 });
+    const matGateBaseFoot = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
+    const matGateGoldTrim = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3, metalness: 0.6 });
+    const matGlowAccent = new THREE.MeshStandardMaterial({ color: 0x00f3ff, emissive: 0x00f3ff, emissiveIntensity: 0.7 });
+
+    // Material Taman
+    const matGardenGrass = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.9 });
+    const matGardenCurb = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
+    const matBushDark = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.8 });
+    const matBushLight = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.8 });
+    const matFlowerPink = new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.6 });
+    const matFlowerYellow = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.6 });
+
+    const lineCyan = new THREE.LineBasicMaterial({ color: 0x00f3ff, linewidth: 1.5 });
+    const lineDark = new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 1.2 });
+    const lineRed = new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 2 });
+    const lineYellow = new THREE.LineBasicMaterial({ color: 0xfacc15, linewidth: 1.5 });
+
+    function createWireMesh(geo, mat, edgeMat = lineDark) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, edgeMat);
+      mesh.add(line);
+      return mesh;
+    }
+
+    function createTextLabel(text, subtext = '', highlightColor = '#ffffff') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 512, 256);
+      ctx.strokeStyle = '#00f3ff';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(10, 10, 492, 236);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = highlightColor;
+      ctx.font = 'bold 48px sans-serif';
+      ctx.fillText(text, 256, subtext ? 95 : 128);
+
+      if (subtext) {
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText(subtext, 256, 170);
+      }
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.4), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+      return labelMesh;
+    }
+
+    // =========================================================================
+    // 4. MATA ANGIN 3D DI TANAH
+    // =========================================================================
+    function create3DCompass(x, z) {
+      const compassGroup = new THREE.Group();
+
+      const outerRing = new THREE.Mesh(
+        new THREE.RingGeometry(3.6, 3.8, 48),
+        new THREE.MeshBasicMaterial({ color: 0x00f3ff, side: THREE.DoubleSide })
+      );
+      outerRing.rotation.x = -Math.PI / 2;
+      outerRing.position.y = 0.02;
+      compassGroup.add(outerRing);
+
+      const innerRing = new THREE.Mesh(
+        new THREE.RingGeometry(1.6, 1.7, 48),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
+      );
+      innerRing.rotation.x = -Math.PI / 2;
+      innerRing.position.y = 0.02;
+      compassGroup.add(innerRing);
+
+      function makeArrowBlade(dirX, dirZ, length, width, colorHex) {
+        const perpX = -dirZ * (width / 2);
+        const perpZ =  dirX * (width / 2);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+          0, 0.03, 0,
+          dirX * length, 0.03, dirZ * length,
+          perpX, 0.03, perpZ,
+          0, 0.03, 0,
+          -perpX, 0.03, -perpZ,
+          dirX * length, 0.03, dirZ * length
+        ]), 3));
+        geo.computeVertexNormals();
+
+        return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide }));
+      }
+
+      compassGroup.add(makeArrowBlade(0, -1, 4.4, 0.9, 0x38bdf8)); // UTARA (U) -> -Z
+      compassGroup.add(makeArrowBlade(0, 1, 4.4, 0.9, 0xf43f5e));  // SELATAN (S) -> +Z
+      compassGroup.add(makeArrowBlade(-1, 0, 4.4, 0.9, 0xfacc15)); // TIMUR (T) -> -X
+      compassGroup.add(makeArrowBlade(1, 0, 4.4, 0.9, 0x00f3ff));  // BARAT (B) -> +X
+
+      const lblU = createTextLabel('U', 'UTARA', '#38bdf8');
+      lblU.rotation.x = -Math.PI / 2;
+      lblU.position.set(0, 0.04, -5.8);
+      lblU.scale.set(0.8, 0.8, 0.8);
+      compassGroup.add(lblU);
+
+      const lblS = createTextLabel('S', 'SELATAN', '#f43f5e');
+      lblS.rotation.x = -Math.PI / 2;
+      lblS.position.set(0, 0.04, 5.8);
+      lblS.scale.set(0.8, 0.8, 0.8);
+      compassGroup.add(lblS);
+
+      const lblT = createTextLabel('T', 'TIMUR', '#facc15');
+      lblT.rotation.x = -Math.PI / 2;
+      lblT.position.set(-5.8, 0.04, 0);
+      lblT.scale.set(0.8, 0.8, 0.8);
+      compassGroup.add(lblT);
+
+      const lblB = createTextLabel('B', 'BARAT', '#00f3ff');
+      lblB.rotation.x = -Math.PI / 2;
+      lblB.position.set(5.8, 0.04, 0);
+      lblB.scale.set(0.8, 0.8, 0.8);
+      compassGroup.add(lblB);
+
+      compassGroup.position.set(x, 0, z);
+      return compassGroup;
+    }
+    scene.add(create3DCompass(21.0, -6.0));
+
+    // =========================================================================
+    // 5. LAPANGAN SEKOLAH (Pusat Z = -5.00 m [SISI UTARA])
+    // =========================================================================
+    const fieldZ = -5.00;
+    const fieldMesh = new THREE.Mesh(new THREE.PlaneGeometry(22, 16), matField);
+    fieldMesh.rotation.x = -Math.PI / 2;
+    fieldMesh.position.set(0, 0.005, fieldZ);
+    fieldMesh.receiveShadow = true;
+    scene.add(fieldMesh);
+
+    const plazaMesh = new THREE.Mesh(new THREE.PlaneGeometry(42, 8.5), matPlazaPath);
+    plazaMesh.rotation.x = -Math.PI / 2;
+    plazaMesh.position.set(-8, 0.003, 7.25);
+    plazaMesh.receiveShadow = true;
+    scene.add(plazaMesh);
+
+    const borderPoints = [
+      new THREE.Vector3(-11, 0.01, fieldZ - 8),
+      new THREE.Vector3( 11, 0.01, fieldZ - 8),
+      new THREE.Vector3( 11, 0.01, fieldZ + 8),
+      new THREE.Vector3(-11, 0.01, fieldZ + 8),
+      new THREE.Vector3(-11, 0.01, fieldZ - 8)
+    ];
+    const borderGeo = new THREE.BufferGeometry().setFromPoints(borderPoints);
+    const borderLine = new THREE.Line(borderGeo, new THREE.LineDashedMaterial({ color: 0x00f3ff, dashSize: 0.6, gapSize: 0.4 }));
+    borderLine.computeLineDistances();
+    scene.add(borderLine);
+
+    const fieldLabel = createTextLabel('LAPANGAN EXPO', '22.00 x 16.00 m');
+    fieldLabel.rotation.x = -Math.PI / 2;
+    fieldLabel.position.set(0, 0.02, fieldZ);
+    fieldLabel.scale.set(1.5, 1.5, 1.5);
+    scene.add(fieldLabel);
+
+    // =========================================================================
+    // 6. GEDUNG 2 LANTAI & PODIUM SEKOLAH
+    // =========================================================================
+    const bldgW = 36.00, bldgD = 7.00, floorH = 3.60, bldgTotalH = 7.20, bldgZ = 16.00;
+    const buildingGroup = new THREE.Group();
+
+    const floor1Mesh = createWireMesh(new THREE.BoxGeometry(bldgW, floorH, bldgD), matBuildingWall, lineDark);
+    floor1Mesh.position.set(0, floorH / 2, 0);
+    buildingGroup.add(floor1Mesh);
+
+    const floor2Mesh = createWireMesh(new THREE.BoxGeometry(bldgW, floorH, bldgD), matBuildingWall, lineDark);
+    floor2Mesh.position.set(0, floorH + (floorH / 2), 0);
+    buildingGroup.add(floor2Mesh);
+
+    const corridorSlab = createWireMesh(new THREE.BoxGeometry(bldgW, 0.20, 1.60), matBuildingCorridor, lineDark);
+    corridorSlab.position.set(0, floorH, -bldgD / 2 - 0.80);
+    buildingGroup.add(corridorSlab);
+
+    const railingMesh = createWireMesh(new THREE.BoxGeometry(bldgW, 0.90, 0.05), matPillar, lineCyan);
+    railingMesh.position.set(0, floorH + 0.45, -bldgD / 2 - 1.55);
+    buildingGroup.add(railingMesh);
+
+    const pillarCount = 10;
+    const pillarSpacing = bldgW / (pillarCount - 1);
+    for (let i = 0; i < pillarCount; i++) {
+      const px = -bldgW / 2 + (i * pillarSpacing);
+      const p1 = createWireMesh(new THREE.BoxGeometry(0.35, floorH, 0.35), matPillar, lineDark);
+      p1.position.set(px, floorH / 2, -bldgD / 2 - 1.55);
+      buildingGroup.add(p1);
+
+      const p2 = createWireMesh(new THREE.BoxGeometry(0.30, floorH, 0.30), matPillar, lineDark);
+      p2.position.set(px, floorH + (floorH / 2), -bldgD / 2 - 1.55);
+      buildingGroup.add(p2);
+    }
+
+    for (let r = 0; r < 8; r++) {
+      const rx = -bldgW / 2 + (r * (bldgW / 8)) + (bldgW / 16);
+      const win1 = createWireMesh(new THREE.BoxGeometry(2.40, 1.60, 0.08), matGlassWindow, lineCyan);
+      win1.position.set(rx, 1.80, -bldgD / 2 - 0.02);
+      buildingGroup.add(win1);
+
+      const win2 = createWireMesh(new THREE.BoxGeometry(2.40, 1.60, 0.08), matGlassWindow, lineCyan);
+      win2.position.set(rx, floorH + 1.80, -bldgD / 2 - 0.02);
+      buildingGroup.add(win2);
+    }
+
+    const roofX1 = -bldgW / 2 - 0.60, roofX2 = bldgW / 2 + 0.60;
+    const roofZFront = -bldgD / 2 - 1.85, roofZBack = bldgD / 2 + 0.65;
+    const roofZRidge = (roofZFront + roofZBack) / 2;
+    const roofEavesY = bldgTotalH, roofRidgeY = bldgTotalH + 2.20;
+
+    const frontSlopeGeo = new THREE.BufferGeometry();
+    frontSlopeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      roofX1, roofEavesY, roofZFront,   roofX2, roofEavesY, roofZFront,   roofX2, roofRidgeY, roofZRidge,
+      roofX1, roofEavesY, roofZFront,   roofX2, roofRidgeY, roofZRidge,   roofX1, roofRidgeY, roofZRidge
+    ]), 3));
+    frontSlopeGeo.computeVertexNormals();
+    buildingGroup.add(createWireMesh(frontSlopeGeo, matRoof, lineCyan));
+
+    const backSlopeGeo = new THREE.BufferGeometry();
+    backSlopeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      roofX2, roofEavesY, roofZBack,   roofX1, roofEavesY, roofZBack,   roofX1, roofRidgeY, roofZRidge,
+      roofX2, roofEavesY, roofZBack,   roofX1, roofRidgeY, roofZRidge,   roofX2, roofRidgeY, roofZRidge
+    ]), 3));
+    backSlopeGeo.computeVertexNormals();
+    buildingGroup.add(createWireMesh(backSlopeGeo, matRoof, lineCyan));
+
+    const ridgeCap = createWireMesh(new THREE.BoxGeometry(roofX2 - roofX1 + 0.1, 0.08, 0.18), matRoof, lineCyan);
+    ridgeCap.position.set(0, roofRidgeY + 0.04, roofZRidge);
+    buildingGroup.add(ridgeCap);
+
+    // Podium Terintegrasi Tengah
+    const podW = 7.00, podD = 3.40, podH = 0.40, corridorFrontZ = -bldgD / 2 - 1.55;
+    const podiumPlatform = createWireMesh(new THREE.BoxGeometry(podW, podH, podD), matPodiumIntegrated, lineYellow);
+    podiumPlatform.position.set(0, podH / 2, corridorFrontZ - (podD / 2));
+    buildingGroup.add(podiumPlatform);
+
+    const canopy = createWireMesh(new THREE.BoxGeometry(podW, 0.20, podD), matBuildingCorridor, lineCyan);
+    canopy.position.set(0, floorH, corridorFrontZ - (podD / 2));
+    buildingGroup.add(canopy);
+
+    const colX1 = -podW / 2 + 0.20;
+    const colX2 =  podW / 2 - 0.20;
+    const colZPos = corridorFrontZ - podD + 0.20;
+
+    [colX1, colX2].forEach(cx => {
+      const col = createWireMesh(new THREE.BoxGeometry(0.30, floorH, 0.30), matPillar, lineDark);
+      col.position.set(cx, floorH / 2, colZPos);
+      buildingGroup.add(col);
+    });
+
+    const frontStep = createWireMesh(new THREE.BoxGeometry(5.00, podH / 2, 0.60), matBuildingCorridor, lineDark);
+    frontStep.position.set(0, podH / 4, corridorFrontZ - podD - 0.30);
+    buildingGroup.add(frontStep);
+
+    const bldgLabel = createTextLabel('GEDUNG 2 LANTAI (36.00 M)', 'RUANG GURU & KELAS');
+    bldgLabel.position.set(0, bldgTotalH + 0.9, -bldgD / 2 - 1.6);
+    bldgLabel.scale.set(1.4, 1.4, 1.4);
+    buildingGroup.add(bldgLabel);
+
+    const podLabel = createTextLabel('PODIUM', 'SEKOLAH');
+    podLabel.rotation.x = -Math.PI / 2;
+    podLabel.position.set(0, podH + 0.02, corridorFrontZ - (podD / 2));
+    buildingGroup.add(podLabel);
+
+    buildingGroup.position.set(0, 0, bldgZ);
+    scene.add(buildingGroup);
+
+    // =========================================================================
+    // 7. GAP 6.00 M & GEDUNG PERPUSTAKAAN (X = -24.00 M S/D -36.00 M)
+    // =========================================================================
+    const libW = 12.00, libD = 7.00, libH = 3.80, libZ = 16.00;
+    const libCenterX = -30.00;
+    const libraryGroup = new THREE.Group();
+
+    const libBody = createWireMesh(new THREE.BoxGeometry(libW, libH, libD), matBuildingWall, lineDark);
+    libBody.position.set(0, libH / 2, 0);
+    libraryGroup.add(libBody);
+
+    const libCorridor = createWireMesh(new THREE.BoxGeometry(libW, 0.20, 1.60), matBuildingCorridor, lineDark);
+    libCorridor.position.set(0, 0.10, -libD / 2 - 0.80);
+    libraryGroup.add(libCorridor);
+
+    for (let p = 0; p < 4; p++) {
+      const px = -libW / 2 + (p * (libW / 3));
+      const col = createWireMesh(new THREE.BoxGeometry(0.30, libH, 0.30), matPillar, lineDark);
+      col.position.set(px, libH / 2, -libD / 2 - 1.55);
+      libraryGroup.add(col);
+    }
+
+    for (let r = 0; r < 3; r++) {
+      const rx = -libW / 2 + (r * 4.00) + 2.00;
+      const win = createWireMesh(new THREE.BoxGeometry(2.40, 1.80, 0.08), matGlassWindow, lineCyan);
+      win.position.set(rx, 2.00, -libD / 2 - 0.02);
+      libraryGroup.add(win);
+    }
+
+    const libRoofX1 = -libW / 2 - 0.60, libRoofX2 = libW / 2 + 0.60;
+    const libRoofRidgeY = libH + 1.80;
+
+    const libFrontSlopeGeo = new THREE.BufferGeometry();
+    libFrontSlopeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      libRoofX1, libH, roofZFront,   libRoofX2, libH, roofZFront,   libRoofX2, libRoofRidgeY, roofZRidge,
+      libRoofX1, libH, roofZFront,   libRoofX2, libRoofRidgeY, roofZRidge,   libRoofX1, libRoofRidgeY, roofZRidge
+    ]), 3));
+    libFrontSlopeGeo.computeVertexNormals();
+    libraryGroup.add(createWireMesh(libFrontSlopeGeo, matRoof, lineCyan));
+
+    const libBackSlopeGeo = new THREE.BufferGeometry();
+    libBackSlopeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      libRoofX2, libH, roofZBack,   libRoofX1, libH, roofZBack,   libRoofX1, libRoofRidgeY, roofZRidge,
+      libRoofX2, libH, roofZBack,   libRoofX1, libRoofRidgeY, roofZRidge,   libRoofX2, libRoofRidgeY, roofZRidge
+    ]), 3));
+    libBackSlopeGeo.computeVertexNormals();
+    libraryGroup.add(createWireMesh(libBackSlopeGeo, matRoof, lineCyan));
+
+    const libRidgeCap = createWireMesh(new THREE.BoxGeometry(libRoofX2 - libRoofX1 + 0.1, 0.08, 0.18), matRoof, lineCyan);
+    libRidgeCap.position.set(0, libRoofRidgeY + 0.04, roofZRidge);
+    libraryGroup.add(libRidgeCap);
+
+    const libLabel = createTextLabel('PERPUSTAKAAN', '1 LANTAI');
+    libLabel.position.set(0, libH + 1.1, -libD / 2 - 1.6);
+    libLabel.scale.set(1.3, 1.3, 1.3);
+    libraryGroup.add(libLabel);
+
+    libraryGroup.position.set(libCenterX, 0, libZ);
+    scene.add(libraryGroup);
+
+    // =========================================================================
+    // 8. PHOTOBOOTH UTAMA DI GAP 6M (NEMPEL DI TEMBOK PERPUS, X = -24.00 M)
+    // =========================================================================
+    const pbGroup = new THREE.Group();
+    const pbStageW = 2.00, pbStageL = 3.00, pbStageH = 0.20;
+
+    function createPBTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 800;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(0, 0, 1200, 800);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([16, 12]);
+      ctx.strokeRect(50, 50, 1100, 700);
+
+      ctx.setLineDash([]);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 82px -apple-system, sans-serif';
+      ctx.fillText('tema blom ada', 600, 400);
+
+      ctx.font = 'bold 32px -apple-system, sans-serif';
+      ctx.fillStyle = '#bae6fd';
+      ctx.fillText('( [ DRAFT BACKDROP 3x2m ] )', 600, 490);
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    const matPBBackdrop = new THREE.MeshStandardMaterial({ map: createPBTexture(), roughness: 0.5 });
+
+    const pbStage = createWireMesh(new THREE.BoxGeometry(pbStageW, pbStageH, pbStageL), matBuildingWall, lineDark);
+    pbStage.position.set(-24.00 + pbStageW / 2, pbStageH / 2, 14.50);
+    pbGroup.add(pbStage);
+
+    const pbCarpet = createWireMesh(new THREE.BoxGeometry(pbStageW, 0.015, pbStageL), matRedCarpet, lineRed);
+    pbCarpet.position.set(-24.00 + pbStageW / 2, pbStageH + 0.0075, 14.50);
+    pbGroup.add(pbCarpet);
+
+    const pbBackdropMesh = createWireMesh(new THREE.BoxGeometry(0.06, 2.00, pbStageL), matPBBackdrop, lineCyan);
+    pbBackdropMesh.position.set(-23.96, pbStageH + 1.00, 14.50);
+    pbGroup.add(pbBackdropMesh);
+
+    const flagColors = [0xf43f5e, 0xfacc15, 0x38bdf8, 0x4ade80, 0xa855f7, 0xfb923c];
+    for (let i = 0; i < 8; i++) {
+      const fz = 13.20 + (i * 0.36);
+      const fy = pbStageH + 1.90 - Math.sin((i / 7) * Math.PI) * 0.12;
+      const flagGeo = new THREE.BufferGeometry();
+      flagGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+        0, 0, -0.1,
+        0, 0,  0.1,
+        0, -0.16, 0
+      ]), 3));
+      flagGeo.computeVertexNormals();
+      const flagMesh = createWireMesh(flagGeo, new THREE.MeshStandardMaterial({ color: flagColors[i % flagColors.length], side: THREE.DoubleSide }), lineDark);
+      flagMesh.position.set(-23.92, fy, fz);
+      pbGroup.add(flagMesh);
+    }
+
+    function createCardboardLetter(char, colorHex) {
+      const group = new THREE.Group();
+      const faceMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.6 });
+      const thick = 0.06, depth = 0.08, H = 0.38, W = 0.22;
+
+      function addBar(w, h, x, y) {
+        const b = createWireMesh(new THREE.BoxGeometry(depth, h, w), faceMat, lineDark);
+        b.position.set(0, y, x);
+        group.add(b);
+      }
+
+      if (char === 'S') {
+        addBar(W, thick, 0, H/2 - thick/2);
+        addBar(thick, H/2, -W/2 + thick/2, H/4);
+        addBar(W, thick, 0, 0);
+        addBar(thick, H/2, W/2 - thick/2, -H/4);
+        addBar(W, thick, 0, -H/2 + thick/2);
+      } else if (char === 'C') {
+        addBar(W, thick, 0, H/2 - thick/2);
+        addBar(thick, H, -W/2 + thick/2, 0);
+        addBar(W, thick, 0, -H/2 + thick/2);
+      } else if (char === 'F') {
+        addBar(thick, H, -W/2 + thick/2, 0);
+        addBar(W, thick, 0, H/2 - thick/2);
+        addBar(W * 0.7, thick, -0.02, 0.02);
+      } else if (char === '2') {
+        addBar(W, thick, 0, H/2 - thick/2);
+        addBar(thick, H/2, W/2 - thick/2, H/4);
+        addBar(W, thick, 0, 0);
+        addBar(thick, H/2, -W/2 + thick/2, -H/4);
+        addBar(W, thick, 0, -H/2 + thick/2);
+      } else if (char === '0') {
+        addBar(thick, H, -W/2 + thick/2, 0);
+        addBar(thick, H, W/2 - thick/2, 0);
+        addBar(W, thick, 0, H/2 - thick/2);
+        addBar(W, thick, 0, -H/2 + thick/2);
+      } else if (char === '7') {
+        addBar(W, thick, 0, H/2 - thick/2);
+        addBar(thick, H, W/2 - thick/2, 0);
+      }
+
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.30, 0.04), matCardboardKraft);
+      leg.rotation.z = 0.35;
+      leg.position.set(-0.08, -0.05, 0);
+      group.add(leg);
+
+      return group;
+    }
+
+    const letters = [
+      { char: 'S', color: 0xfacc15 }, { char: 'C', color: 0xf43f5e }, { char: 'F', color: 0x00f3ff },
+      { char: '2', color: 0x4ade80 }, { char: '0', color: 0xfb923c }, { char: '2', color: 0xa855f7 }, { char: '7', color: 0xfde047 }
+    ];
+
+    letters.forEach((item, idx) => {
+      const lMesh = createCardboardLetter(item.char, item.color);
+      const lz = 13.35 + (idx * 0.36) + (idx >= 3 ? 0.06 : -0.06);
+      lMesh.position.set(-21.85, pbStageH + 0.19, lz);
+      pbGroup.add(lMesh);
+    });
+
+    const pbLabel = createTextLabel('PHOTOBOOTH', 'SCF 2027');
+    pbLabel.position.set(-22.9, pbStageH + 2.5, 14.50);
+    pbLabel.rotation.y = Math.PI / 2;
+    pbLabel.scale.set(1.2, 1.2, 1.2);
+    pbGroup.add(pbLabel);
+
+    scene.add(pbGroup);
+
+    // =========================================================================
+    // 9. PANGGUNG UTAMA OPEN STAGE (NEMPEL PODIUM, ELEVASI 0.50 M)
+    // =========================================================================
+    function createOpenCleanStage() {
+      const stageGroup = new THREE.Group();
+      const sW = 6.00, sD = 4.00, sH = 0.50;
+
+      const stageBase = new THREE.Mesh(
+        new THREE.BoxGeometry(sW, sH, sD),
+        [matStageSkirt, matStageSkirt, matStageFloor, matStageSkirt, matStageSkirt, matStageSkirt]
+      );
+      stageBase.position.set(0, sH / 2, 0);
+      stageBase.receiveShadow = true;
+      stageBase.castShadow = true;
+      stageGroup.add(stageBase);
+
+      const stageCarpet = new THREE.Mesh(new THREE.PlaneGeometry(2.40, sD - 0.1), matRedCarpet);
+      stageCarpet.rotation.x = -Math.PI / 2;
+      stageCarpet.position.set(0, sH + 0.005, 0);
+      stageGroup.add(stageCarpet);
+
+      [-sW / 2 - 0.55, sW / 2 + 0.55].forEach(sx => {
+        const sub = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.70, 0.65), matSpeaker);
+        sub.position.set(sx, 0.35, -sD / 2 + 0.6);
+        stageGroup.add(sub);
+
+        const top1 = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.35, 0.45), matSpeaker);
+        top1.position.set(sx, 0.70 + 0.18, -sD / 2 + 0.6);
+        stageGroup.add(top1);
+
+        const top2 = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.35, 0.45), matSpeaker);
+        top2.position.set(sx, 0.70 + 0.55, -sD / 2 + 0.6);
+        top2.rotation.x = -0.06;
+        stageGroup.add(top2);
+      });
+
+      [-1.8, 1.8].forEach(mx => {
+        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.20, 0.30), matSpeaker);
+        mon.rotation.x = 0.35;
+        mon.position.set(mx, sH + 0.10, -sD / 2 + 0.35);
+        stageGroup.add(mon);
+      });
+
+      const podium = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.05, 0.35), matPodiumIntegrated);
+      podium.position.set(1.5, sH + 0.525, -sD / 2 + 0.9);
+      stageGroup.add(podium);
+
+      const micStem = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.35), matPillar);
+      micStem.rotation.x = 0.3;
+      micStem.position.set(1.5, sH + 1.15, -sD / 2 + 0.85);
+      stageGroup.add(micStem);
+
+      [-sW / 2 - 0.35, sW / 2 + 0.35].forEach(sx => {
+        for (let st = 1; st <= 2; st++) {
+          const step = new THREE.Mesh(new THREE.BoxGeometry(0.65, sH / 2, 0.40), matStageSkirt);
+          step.position.set(sx, (st - 0.5) * (sH / 2), -sD / 2 + (st * 0.45));
+          stageGroup.add(step);
+        }
+      });
+
+      const label = createTextLabel('PANGGUNG UTAMA', '6.00 x 4.00 m (OPEN STAGE 0.50 M)');
+      label.position.set(0, sH + 1.4, 0);
+      label.scale.set(1.1, 1.1, 1.1);
+      stageGroup.add(label);
+
+      return stageGroup;
+    }
+
+    const expoStage = createOpenCleanStage();
+    expoStage.position.set(0, 0, 5.25);
+    scene.add(expoStage);
+
+    // =========================================================================
+    // 10. 10 UNIT TEROP STAND (FORMASI LETTER U)
+    // =========================================================================
+    function createTerop(x, z, rotY, teropName, univCount) {
+      const group = new THREE.Group();
+      const tW = 5.50, tD = 3.50, tH = 2.30, tPeak = 3.00;
+
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(tW, tD), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0.01;
+      group.add(floor);
+
+      const halfW = tW / 2, halfD = tD / 2;
+      [[-halfW, -halfD], [halfW, -halfD], [halfW, halfD], [-halfW, halfD]].forEach(([px, pz]) => {
+        const postGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(px, 0, pz),
+          new THREE.Vector3(px, tH, pz)
+        ]);
+        group.add(new THREE.Line(postGeo, matTentFrame));
+      });
+
+      const roofPoints = [
+        new THREE.Vector3(-halfW, tH, halfD), new THREE.Vector3(halfW, tH, halfD),
+        new THREE.Vector3(halfW, tH, -halfD), new THREE.Vector3(-halfW, tH, -halfD),
+        new THREE.Vector3(-halfW, tH, halfD), new THREE.Vector3(0, tPeak, 0),
+        new THREE.Vector3(halfW, tH, halfD), new THREE.Vector3(0, tPeak, 0),
+        new THREE.Vector3(halfW, tH, -halfD), new THREE.Vector3(0, tPeak, 0),
+        new THREE.Vector3(-halfW, tH, -halfD)
+      ];
+      group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(roofPoints), matTentFrame));
+
+      const roofPyramidGeo = new THREE.ConeGeometry(3.6, tPeak - tH, 4);
+      const roofMesh = new THREE.Mesh(roofPyramidGeo, matTentRoof);
+      roofMesh.position.set(0, tH + (tPeak - tH) / 2, 0);
+      roofMesh.rotation.y = Math.PI / 4;
+      group.add(roofMesh);
+
+      const tableSpacing = tW / (univCount + 1);
+      for (let i = 1; i <= univCount; i++) {
+        const tblX = -halfW + (i * tableSpacing);
+        const tbl = createWireMesh(new THREE.BoxGeometry(1.20, 0.75, 0.50), matTable, lineDark);
+        tbl.position.set(tblX, 0.375, 0.40);
+        group.add(tbl);
+
+        [-0.3, 0.3].forEach(cx => {
+          const chair = createWireMesh(new THREE.BoxGeometry(0.35, 0.45, 0.35), new THREE.MeshStandardMaterial({ color: 0x475569 }), lineDark);
+          chair.position.set(tblX + cx, 0.225, -0.25);
+          group.add(chair);
+        });
+      }
+
+      const label = createTextLabel(teropName, `${univCount} UNIV`);
+      label.position.set(0, tPeak + 0.75, 0);
+      group.add(label);
+
+      const arrowGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0.06, halfD + 0.2),
+        new THREE.Vector3(0, 0.06, halfD + 1.1)
+      ]);
+      group.add(new THREE.Line(arrowGeo, lineRed));
+
+      group.position.set(x, 0, z);
+      group.rotation.y = rotY;
+      return group;
+    }
+
+    // Baris Sisi Utara / Lapangan (Z = -15.50 m)
+    scene.add(createTerop(-8.7, fieldZ - 10.5, 0, 'TEROP 04', 3));
+    scene.add(createTerop(-2.9, fieldZ - 10.5, 0, 'TEROP 05', 3));
+    scene.add(createTerop( 2.9, fieldZ - 10.5, 0, 'TEROP 06', 3));
+    scene.add(createTerop( 8.7, fieldZ - 10.5, 0, 'TEROP 07', 2));
+
+    // Baris Sisi Timur (X = -13.50 m) - Di depan Taman Timur
+    scene.add(createTerop(-13.5, fieldZ - 5.0, -Math.PI / 2, 'TEROP 03', 3));
+    scene.add(createTerop(-13.5, fieldZ + 0.5, -Math.PI / 2, 'TEROP 02', 3));
+    scene.add(createTerop(-13.5, fieldZ + 6.0, -Math.PI / 2, 'TEROP 01', 3));
+
+    // Baris Sisi Barat (X = +13.50 m)
+    scene.add(createTerop( 13.5, fieldZ - 5.0, Math.PI / 2, 'TEROP 08', 3));
+    scene.add(createTerop( 13.5, fieldZ + 0.5, Math.PI / 2, 'TEROP 09', 3));
+    scene.add(createTerop( 13.5, fieldZ + 6.0, Math.PI / 2, 'TEROP 10', 2));
+
+    // =========================================================================
+    // 11. TAMAN TIMUR DI BELAKANG TEROP 01–03 (X = -17.35 M)
+    // =========================================================================
+    function createEastGardenNearPerpus() {
+      const gardenGroup = new THREE.Group();
+      const gardenW = 1.20, gardenL = 18.00, gardenH = 0.18, gardenX = -17.35, gardenZ = -5.00;
+
+      const curbMesh = createWireMesh(new THREE.BoxGeometry(gardenW + 0.16, gardenH, gardenL + 0.16), matGardenCurb, lineDark);
+      curbMesh.position.set(gardenX, gardenH / 2, gardenZ);
+      gardenGroup.add(curbMesh);
+
+      const grassMesh = new THREE.Mesh(new THREE.BoxGeometry(gardenW, gardenH + 0.04, gardenL), matGardenGrass);
+      grassMesh.position.set(gardenX, (gardenH + 0.04) / 2, gardenZ);
+      grassMesh.receiveShadow = true;
+      gardenGroup.add(grassMesh);
+
+      const bushCount = 14;
+      const stepZ = (gardenL - 1.5) / (bushCount - 1);
+      for (let i = 0; i < bushCount; i++) {
+        const bz = (gardenZ - gardenL / 2 + 0.75) + (i * stepZ);
+        const bx = gardenX + ((i % 2 === 0 ? 0.12 : -0.12));
+        const bushRadius = 0.32 + ((i % 3) * 0.06);
+
+        const shrubGeo = new THREE.DodecahedronGeometry(bushRadius, 1);
+        const shrubMat = (i % 2 === 0) ? matBushDark : matBushLight;
+        const shrubMesh = new THREE.Mesh(shrubGeo, shrubMat);
+        shrubMesh.castShadow = true;
+        shrubMesh.position.set(bx, gardenH + bushRadius * 0.7, bz);
+        shrubMesh.rotation.set(i * 0.4, i * 0.8, 0);
+        gardenGroup.add(shrubMesh);
+
+        if (i % 2 === 1) {
+          const flowerGeo = new THREE.SphereGeometry(0.10, 6, 6);
+          const flowerMat = (i % 4 === 1) ? matFlowerPink : matFlowerYellow;
+          const flowerMesh = new THREE.Mesh(flowerGeo, flowerMat);
+          flowerMesh.position.set(bx, gardenH + (bushRadius * 1.4), bz);
+          gardenGroup.add(flowerMesh);
+        }
+      }
+
+      const gardenLabel = createTextLabel('TAMAN TIMUR', '1.20 x 18.00 M', '#4ade80');
+      gardenLabel.rotation.y = Math.PI / 2;
+      gardenLabel.position.set(gardenX + 0.75, 1.20, gardenZ);
+      gardenLabel.scale.set(1.2, 1.2, 1.2);
+      gardenGroup.add(gardenLabel);
+
+      return gardenGroup;
+    }
+    scene.add(createEastGardenNearPerpus());
+
+    // =========================================================================
+    // 12. ENHANCED BLUE WELCOME GATE (MODULAR 3D PORTAL, ROYAL BLUE & GOLD ACCENT)
+    // =========================================================================
+    function createEnhancedBlueWelcomeGate() {
+      const gateGroup = new THREE.Group();
+      const totalW = 4.40, totalH = 3.40, gateDepth = 0.65;
+      const pillarW = 0.70, pillarH = 2.65, beamH = 0.75;
+      const portalClearW = 3.00, portalClearH = 2.65;
+      const pillarCenterX = (totalW / 2) - (pillarW / 2); // ±1.85 m
+
+      // A. Rangka Struktur Pilar Kiri & Kanan (Pilar Bodi, Base Plinth & Outrigger)
+      [-pillarCenterX, pillarCenterX].forEach(px => {
+        // Base Plinth Bawah Beton/Baja Hitam
+        const plinth = createWireMesh(new THREE.BoxGeometry(pillarW + 0.16, 0.18, gateDepth + 0.20), matGateBaseFoot, lineDark);
+        plinth.position.set(px, 0.09, 0);
+        gateGroup.add(plinth);
+
+        // Bodi Utama Pilar Royal Blue
+        const pMesh = createWireMesh(new THREE.BoxGeometry(pillarW, pillarH - 0.18, gateDepth), matGateStructure, lineCyan);
+        pMesh.position.set(px, 0.18 + (pillarH - 0.18) / 2, 0);
+        gateGroup.add(pMesh);
+
+        // Lis Vertikal Cyan Glow & Aksen Strip
+        const neonStrip = new THREE.Mesh(new THREE.BoxGeometry(0.04, pillarH - 0.30, gateDepth + 0.02), matGlowAccent);
+        neonStrip.position.set(px, 0.18 + (pillarH - 0.18) / 2, 0);
+        gateGroup.add(neonStrip);
+
+        // Crown Capital Emas di atas Pilar
+        const cap = createWireMesh(new THREE.BoxGeometry(pillarW + 0.10, 0.10, gateDepth + 0.10), matGateGoldTrim, lineYellow);
+        cap.position.set(px, pillarH + 0.05, 0);
+        gateGroup.add(cap);
+
+        // Kaki Penyangga A-Frame Outrigger Kokoh
+        const foot = createWireMesh(new THREE.BoxGeometry(0.09, 0.06, 1.60), matSupportWood, lineDark);
+        foot.position.set(px, 0.03, 0);
+        gateGroup.add(foot);
+
+        const strutF = createWireMesh(new THREE.BoxGeometry(0.06, 1.70, 0.06), matSupportWood, lineDark);
+        strutF.position.set(px, 0.85, 0.40);
+        strutF.rotation.x = 0.45;
+        gateGroup.add(strutF);
+
+        const strutB = createWireMesh(new THREE.BoxGeometry(0.06, 1.70, 0.06), matSupportWood, lineDark);
+        strutB.position.set(px, 0.85, -0.40);
+        strutB.rotation.x = -0.45;
+        gateGroup.add(strutB);
+
+        // Lampu Sorot Mini Atas (Spotlight Downlight)
+        const downlight = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.10, 0.12, 8), matGlowAccent);
+        downlight.position.set(px, pillarH + 0.15, 0);
+        gateGroup.add(downlight);
+      });
+
+      // Balok Atas Header Beam
+      const beamMesh = createWireMesh(new THREE.BoxGeometry(totalW + 0.20, beamH, gateDepth), matGateStructure, lineCyan);
+      beamMesh.position.set(0, pillarH + beamH / 2, 0);
+      gateGroup.add(beamMesh);
+
+      // Lis Mahkota Atas Emas (Fascia Crown)
+      const topCrown = createWireMesh(new THREE.BoxGeometry(totalW + 0.35, 0.12, gateDepth + 0.08), matGateGoldTrim, lineYellow);
+      topCrown.position.set(0, totalH + 0.06, 0);
+      gateGroup.add(topCrown);
+
+      // B. Panel Grafis Portal Berlubang (Texture Premium Blue, Cyan & Gold)
+      function makeEnhancedBluePortalTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1760;
+        canvas.height = 1360;
+        const ctx = canvas.getContext('2d');
+
+        // Background Gradient Royal Deep Blue
+        const grad = ctx.createLinearGradient(0, 0, 1760, 1360);
+        grad.addColorStop(0, '#0369a1');
+        grad.addColorStop(0.3, '#0284c7');
+        grad.addColorStop(0.7, '#0ea5e9');
+        grad.addColorStop(1, '#075985');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1760, 1360);
+
+        // Modern Cyber Grid Accent
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 3;
+        for (let x = 0; x < 1760; x += 55) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1360); ctx.stroke();
+        }
+        for (let y = 0; y < 1360; y += 55) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1760, y); ctx.stroke();
+        }
+
+        // Lis Frame Emas & Cyan
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 18;
+        ctx.strokeRect(25, 25, 1710, 1310);
+
+        ctx.strokeStyle = '#00f3ff';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(45, 45, 1670, 1270);
+
+        // Header Banner Atas (Teks Tajam & Mewah)
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText('★ SMAGA CAMPUS FAIR 2027 ★', 880, 95);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 78px sans-serif';
+        ctx.fillText('SELAMAT DATANG DI EXPO', 880, 180);
+
+        ctx.fillStyle = '#bae6fd';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.fillText('GERBANG MENUJU PERGURUAN TINGGI IMPIAN', 880, 240);
+
+        // Border Lubang Portal Pandu
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(280, 280, 1200, 1080);
+
+        // Sponsor & Kampus Mockup di Pilar Samping Kiri & Kanan
+        [140, 1620].forEach(cx => {
+          for(let y = 350; y <= 1120; y += 185) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(cx - 100, y, 200, 95);
+            ctx.strokeStyle = '#00f3ff';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(cx - 100, y, 200, 95);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 22px sans-serif';
+            ctx.fillText('SPONSOR', cx, y + 46);
+            ctx.fillStyle = '#0284c7';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('PARTNER', cx, y + 74);
+          }
+        });
+
+        return new THREE.CanvasTexture(canvas);
+      }
+
+      const matPortalFace = new THREE.MeshStandardMaterial({
+        map: makeEnhancedBluePortalTexture(),
+        roughness: 0.35,
+        side: THREE.DoubleSide
+      });
+
+      // Bentuk Poligon Berlubang Bersih
+      const portalShape = new THREE.Shape();
+      portalShape.moveTo(-totalW / 2, 0);
+      portalShape.lineTo( totalW / 2, 0);
+      portalShape.lineTo( totalW / 2, totalH);
+      portalShape.lineTo(-totalW / 2, totalH);
+      portalShape.closePath();
+
+      const portalHole = new THREE.Path();
+      portalHole.moveTo(-portalClearW / 2, 0);
+      portalHole.lineTo( portalClearW / 2, 0);
+      portalHole.lineTo( portalClearW / 2, portalClearH);
+      portalHole.lineTo(-portalClearW / 2, portalClearH);
+      portalHole.closePath();
+      portalShape.holes.push(portalHole);
+
+      // Muka Depan & Belakang Portal
+      const portalGeoFront = new THREE.ShapeGeometry(portalShape);
+      const portalMeshFront = new THREE.Mesh(portalGeoFront, matPortalFace);
+      portalMeshFront.position.set(0, 0, gateDepth / 2 + 0.008);
+      gateGroup.add(portalMeshFront);
+
+      const portalGeoBack = new THREE.ShapeGeometry(portalShape);
+      const portalMeshBack = new THREE.Mesh(portalGeoBack, matPortalFace);
+      portalMeshBack.rotation.y = Math.PI;
+      portalMeshBack.position.set(0, 0, -gateDepth / 2 - 0.008);
+      gateGroup.add(portalMeshBack);
+
+      const gateLabel = createTextLabel('WELCOME GATE (BLUE)', '4.40 x 3.40 M PORTAL', '#00f3ff');
+      gateLabel.position.set(0, totalH + 0.90, 0);
+      gateLabel.scale.set(1.1, 1.1, 1.1);
+      gateGroup.add(gateLabel);
+
+      return gateGroup;
+    }
+
+    // Welcome gate biru diposisikan pada koordinat Z = +6.00 m (Selatan) dengan sudut hadap serong
+    const welcomeGate = createEnhancedBlueWelcomeGate();
+    welcomeGate.position.set(-11.80, 0, 6.00);
+    welcomeGate.rotation.y = -Math.PI / 3.2; 
+    scene.add(welcomeGate);
+
+    // =========================================================================
+    // 13. 2 UNIT PHOTOBOOTH FRAME TRIPLEK (122 x 200 CM)
+    // =========================================================================
+    function createPhotoboothFrameItem() {
+      const group = new THREE.Group();
+      const W = 1.22, H = 2.00, T = 0.03;
+      const holeW = 0.82, holeH = 1.10, holeBottomY = 0.65;
+
+      function makeFrameTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1220;
+        canvas.height = 2000;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, 1220, 2000);
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 14;
+        ctx.strokeRect(20, 20, 1180, 1960);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#0284c7';
+        ctx.font = 'bold 110px sans-serif';
+        ctx.fillText('SCF 2027', 610, 130);
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 34px sans-serif';
+        ctx.fillText('★ SMAGA CAMPUS FAIR ★', 610, 200);
+
+        ctx.strokeStyle = '#e11d48';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(200, 250, 820, 1100);
+
+        ctx.fillStyle = '#38bdf8';
+        for(let y = 350; y <= 1250; y += 150) {
+          ctx.beginPath();
+          ctx.arc(100, y, 14, 0, Math.PI * 2);
+          ctx.arc(1120, y, 14, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(80, 1420, 1060, 240);
+        ctx.fillStyle = '#00f3ff';
+        ctx.font = 'bold 64px sans-serif';
+        ctx.fillText('SMAGA CAMPUS FAIR', 610, 1500);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText('#FutureStartsHere • SNBP 2027', 610, 1580);
+
+        ctx.fillStyle = '#e11d48';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.fillText('TAG US @smagacampusfair', 610, 1820);
+
+        return new THREE.CanvasTexture(canvas);
+      }
+
+      const matGraphic = new THREE.MeshStandardMaterial({ map: makeFrameTexture(), roughness: 0.4 });
+
+      const shape = new THREE.Shape();
+      shape.moveTo(-W/2, 0);
+      shape.lineTo( W/2, 0);
+      shape.lineTo( W/2, H);
+      shape.lineTo(-W/2, H);
+      shape.closePath();
+
+      const hole = new THREE.Path();
+      hole.moveTo(-holeW/2, holeBottomY);
+      hole.lineTo( holeW/2, holeBottomY);
+      hole.lineTo( holeW/2, holeBottomY + holeH);
+      hole.lineTo(-holeW/2, holeBottomY + holeH);
+      hole.closePath();
+      shape.holes.push(hole);
+
+      const frameGeo = new THREE.ExtrudeGeometry(shape, { depth: T, bevelEnabled: false });
+      const frameMesh = new THREE.Mesh(frameGeo, [matGraphic, matWoodKaso]);
+      frameMesh.position.set(0, 0, -T / 2);
+      frameMesh.castShadow = true;
+      group.add(frameMesh);
+
+      [-0.50, 0.50].forEach(kx => {
+        const leg = createWireMesh(new THREE.BoxGeometry(0.04, 1.65, 0.04), matWoodFrameBack, lineDark);
+        leg.rotation.x = -0.38;
+        leg.position.set(kx, 0.75, -0.36);
+        group.add(leg);
+
+        const foot = createWireMesh(new THREE.BoxGeometry(0.04, 0.03, 0.80), matWoodFrameBack, lineDark);
+        foot.position.set(kx, 0.015, -0.38);
+        group.add(foot);
+      });
+
+      const frameLabel = createTextLabel('PHOTOBOOTH', 'FRAME 1.22x2.0m', '#facc15');
+      frameLabel.position.set(0, H + 0.55, 0);
+      frameLabel.scale.set(0.65, 0.65, 0.65);
+      group.add(frameLabel);
+
+      return group;
+    }
+
+    const frame1 = createPhotoboothFrameItem();
+    frame1.position.set(-10.20, 0, 1.50);
+    frame1.rotation.y = Math.PI / 6;
+    scene.add(frame1);
+
+    const frame2 = createPhotoboothFrameItem();
+    frame2.position.set(10.20, 0, 1.50);
+    frame2.rotation.y = -Math.PI / 6;
+    scene.add(frame2);
+
+    // =========================================================================
+    // 14. JALUR AKSES SIRKULASI MASUK MENUJU LAPANGAN
+    // =========================================================================
+    const flowPoints = [
+      new THREE.Vector3(-21.0, 0.05, 20.0),
+      new THREE.Vector3(-21.0, 0.05, 11.0),
+      new THREE.Vector3(-14.5, 0.05,  8.0),
+      new THREE.Vector3(-11.8, 0.05,  6.0),
+      new THREE.Vector3(-7.0,  0.05, -1.0)
+    ];
+    const flowGeo = new THREE.BufferGeometry().setFromPoints(flowPoints);
+    const flowLine = new THREE.Line(flowGeo, new THREE.LineDashedMaterial({ color: 0xf43f5e, dashSize: 0.8, gapSize: 0.4 }));
+    flowLine.computeLineDistances();
+    scene.add(flowLine);
+
+    const entranceLabel = createTextLabel('ARAH MASUK', 'KORIDOR GAP TIMUR');
+    entranceLabel.rotation.x = -Math.PI / 2;
+    entranceLabel.position.set(-21.0, 0.06, 17.5);
+    scene.add(entranceLabel);
+
+    // Resize Handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
