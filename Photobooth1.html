@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketsa 3D Photobooth Expo - SCF 2027 (Tembok Perpus)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #canvas-container { width: 100%; height: 100%; }
+    .hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: #f8fafc;
+      background: rgba(15, 23, 42, 0.88);
+      padding: 14px 20px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      font-size: 12px;
+      pointer-events: none;
+      line-height: 1.6;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .hud b { color: #00f3ff; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div class="hud">
+    <b>DATA DIMENSI & UKURAN</b><br>
+    • Luas Area Panggung: <b>3.00 m × 2.00 m</b><br>
+    • Elevasi Panggung: <b>0.20 m (20 cm)</b><br>
+    • Ukuran Backdrop: <b>3.00 m × 2.00 m</b><br>
+    • Elevasi Puncak Backdrop: <b>2.20 m</b><br>
+    • Dimensi Huruf Kardus: <b>0.44 m × 0.26 m × 0.07 m</b>
+  </div>
+  <div id="canvas-container"></div>
+
+  <script>
+    const container = document.getElementById('canvas-container');
+
+    // 1. Scene Setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b0f19');
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(4.8, 3.2, 5.6);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 0.9, 0);
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+    // 2. Lighting Setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.25);
+    dirLight.position.set(6, 10, 6);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.45);
+    fillLight.position.set(-6, 5, -4);
+    scene.add(fillLight);
+
+    // Floor Grid
+    const grid = new THREE.GridHelper(12, 12, 0x00f3ff, 0x1e293b);
+    scene.add(grid);
+
+    // 3. Texture Generator Tulisan Backdrop "tema blom ada"
+    function createBackdropTextTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 800;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(0, 0, 1200, 800);
+
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([16, 12]);
+      ctx.strokeRect(50, 50, 1100, 700);
+
+      ctx.setLineDash([]);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      ctx.fillStyle = '#0369a1';
+      ctx.font = 'bold 82px -apple-system, sans-serif';
+      ctx.fillText('tema blom ada', 603, 403);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('tema blom ada', 600, 400);
+
+      ctx.font = 'bold 32px -apple-system, sans-serif';
+      ctx.fillStyle = '#bae6fd';
+      ctx.fillText('( [ DRAFT BACKDROP 3x2m ] )', 600, 490);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = 4;
+      return texture;
+    }
+
+    // 4. Texture Generator Tulisan "tembok perpus"
+    function createWallLabelTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 250;
+      const ctx = canvas.getContext('2d');
+
+      // Latar Plang Label
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 800, 250);
+
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(10, 10, 780, 230);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.fillStyle = '#00f3ff';
+      ctx.font = 'bold 64px -apple-system, sans-serif';
+      ctx.fillText('tembok perpus', 400, 125);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = 4;
+      return texture;
+    }
+
+    // 5. Materials
+    const matStageBase = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+    const matRedCarpet = new THREE.MeshStandardMaterial({ color: 0xbe123c, roughness: 0.8 });
+    const matWall = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+    const matBackdropText = new THREE.MeshStandardMaterial({ 
+      map: createBackdropTextTexture(),
+      roughness: 0.5 
+    });
+    const matWallLabel = new THREE.MeshStandardMaterial({
+      map: createWallLabelTexture(),
+      roughness: 0.4
+    });
+    const matCardboardKraft = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.9 });
+
+    const lineCyan = new THREE.LineBasicMaterial({ color: 0x00f3ff, linewidth: 1.5 });
+    const lineRed = new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 1.5 });
+    const lineDark = new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 1.2 });
+    const lineYellow = new THREE.LineBasicMaterial({ color: 0xfacc15, linewidth: 1.5 });
+
+    function createWireMesh(geo, mat, edgeMat = lineCyan) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, edgeMat);
+      mesh.add(line);
+      return mesh;
+    }
+
+    // 6. TEMBOK GEDUNG PERPUSTAKAAN
+    const wallGeo = new THREE.BoxGeometry(6.5, 4.0, 0.2);
+    const wallMesh = createWireMesh(wallGeo, matWall, lineDark);
+    wallMesh.position.set(0, 2.0, -1.1);
+    scene.add(wallMesh);
+
+    // Plang Tulisan "tembok perpus" di Bagian Atas Tembok
+    const wallSignGeo = new THREE.BoxGeometry(2.0, 0.6, 0.04);
+    const wallSignMesh = createWireMesh(wallSignGeo, matWallLabel, lineCyan);
+    wallSignMesh.position.set(0, 3.1, -0.98);
+    scene.add(wallSignMesh);
+
+    // Jendela Perpustakaan di Sisi Kanan
+    const windowGeo = new THREE.BoxGeometry(1.2, 1.8, 0.04);
+    const windowMesh = createWireMesh(windowGeo, new THREE.MeshStandardMaterial({ color: 0x1e293b }), lineCyan);
+    windowMesh.position.set(2.2, 2.0, -0.98);
+    scene.add(windowMesh);
+
+    // 7. PANGGUNG PHOTOBOOTH (3.0 m × 2.0 m × 0.20 m)
+    const stageW = 3.0, stageD = 2.0, stageH = 0.20;
+    
+    // Dasar Panggung
+    const stage = createWireMesh(new THREE.BoxGeometry(stageW, stageH, stageD), matStageBase, lineDark);
+    stage.position.set(0, stageH / 2, 0);
+    scene.add(stage);
+
+    // Full Red Carpet
+    const redCarpet = createWireMesh(new THREE.BoxGeometry(stageW, 0.015, stageD), matRedCarpet, lineRed);
+    redCarpet.position.set(0, stageH + 0.0075, 0);
+    scene.add(redCarpet);
+
+    // 8. BACKDROP DENGAN TULISAN "tema blom ada" (3.00 m × 2.00 m)
+    const backdropW = 3.0, backdropH = 2.0;
+    const backdropZ = -stageD / 2 + 0.03;
+
+    const backdropMesh = createWireMesh(
+      new THREE.BoxGeometry(backdropW, backdropH, 0.05),
+      matBackdropText,
+      lineCyan
+    );
+    backdropMesh.position.set(0, stageH + (backdropH / 2), backdropZ);
+    scene.add(backdropMesh);
+
+    // Bendera Segitiga Warna-Warni
+    const flagColors = [0xf43f5e, 0xfacc15, 0x38bdf8, 0x4ade80, 0xa855f7, 0xfb923c];
+    const flagCount = 10;
+    for (let i = 0; i < flagCount; i++) {
+      const fx = -1.35 + (i * 0.3);
+      const fy = stageH + 1.9 - Math.sin((i / (flagCount - 1)) * Math.PI) * 0.15;
+      
+      const flagGeo = new THREE.BufferGeometry();
+      flagGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+        -0.1, 0, 0,
+         0.1, 0, 0,
+         0,  -0.18, 0
+      ]), 3));
+      flagGeo.computeVertexNormals();
+
+      const fMat = new THREE.MeshStandardMaterial({ color: flagColors[i % flagColors.length], side: THREE.DoubleSide });
+      const flagMesh = createWireMesh(flagGeo, fMat, lineDark);
+      flagMesh.position.set(fx, fy, backdropZ + 0.04);
+      scene.add(flagMesh);
+    }
+
+    // Tali Gantungan Bendera
+    const stringPoints = [];
+    for (let i = 0; i <= 20; i++) {
+      const sx = -1.45 + (i * (2.9 / 20));
+      const sy = stageH + 1.92 - Math.sin((i / 20) * Math.PI) * 0.15;
+      stringPoints.push(new THREE.Vector3(sx, sy, backdropZ + 0.042));
+    }
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(stringPoints), lineYellow));
+
+    // 9. DEKORASI HURUF KARDUS TIMBUL "SCF 2027" DI DEPAN PANGGUNG
+    function createCardboardBlockLetter(char, colorHex) {
+      const letterGroup = new THREE.Group();
+      const faceMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.6 });
+      const barThick = 0.07;
+      const barDepth = 0.09;
+
+      function addBar(w, h, x, y, rotZ = 0) {
+        const barGeo = new THREE.BoxGeometry(w, h, barDepth);
+        const bar = createWireMesh(barGeo, faceMat, lineDark);
+        bar.position.set(x, y, 0);
+        bar.rotation.z = rotZ;
+        letterGroup.add(bar);
+      }
+
+      const H = 0.44;
+      const W = 0.26;
+
+      switch(char) {
+        case 'S':
+          addBar(W, barThick, 0, H/2 - barThick/2);
+          addBar(barThick, H/2, -W/2 + barThick/2, H/4);
+          addBar(W, barThick, 0, 0);
+          addBar(barThick, H/2, W/2 - barThick/2, -H/4);
+          addBar(W, barThick, 0, -H/2 + barThick/2);
+          break;
+        case 'C':
+          addBar(W, barThick, 0, H/2 - barThick/2);
+          addBar(barThick, H, -W/2 + barThick/2, 0);
+          addBar(W, barThick, 0, -H/2 + barThick/2);
+          break;
+        case 'F':
+          addBar(barThick, H, -W/2 + barThick/2, 0);
+          addBar(W, barThick, 0, H/2 - barThick/2);
+          addBar(W * 0.75, barThick, -0.03, 0.02);
+          break;
+        case '2':
+          addBar(W, barThick, 0, H/2 - barThick/2);
+          addBar(barThick, H/2, W/2 - barThick/2, H/4);
+          addBar(W, barThick, 0, 0);
+          addBar(barThick, H/2, -W/2 + barThick/2, -H/4);
+          addBar(W, barThick, 0, -H/2 + barThick/2);
+          break;
+        case '0':
+          addBar(barThick, H, -W/2 + barThick/2, 0);
+          addBar(barThick, H, W/2 - barThick/2, 0);
+          addBar(W, barThick, 0, H/2 - barThick/2);
+          addBar(W, barThick, 0, -H/2 + barThick/2);
+          break;
+        case '7':
+          addBar(W, barThick, 0, H/2 - barThick/2);
+          addBar(barThick, H, W/2 - barThick/2, 0);
+          break;
+      }
+
+      // Kaki Penopang Belakang
+      const legGeo = new THREE.BoxGeometry(0.04, 0.35, 0.02);
+      const leg = new THREE.Mesh(legGeo, matCardboardKraft);
+      leg.rotation.x = -0.35;
+      leg.position.set(0, -0.06, -0.1);
+      letterGroup.add(leg);
+
+      return letterGroup;
+    }
+
+    const lettersData = [
+      { char: 'S', color: 0xfacc15 },
+      { char: 'C', color: 0xf43f5e },
+      { char: 'F', color: 0x00f3ff },
+      { char: '2', color: 0x4ade80 },
+      { char: '0', color: 0xfb923c },
+      { char: '2', color: 0xa855f7 },
+      { char: '7', color: 0xfde047 }
+    ];
+
+    const totalLetters = lettersData.length;
+    const letterSpacing = 0.36;
+    const startX = -((totalLetters - 1) * letterSpacing) / 2;
+
+    lettersData.forEach((item, index) => {
+      const letterMesh = createCardboardBlockLetter(item.char, item.color);
+      const posX = startX + (index * letterSpacing) + (index >= 3 ? 0.08 : -0.08);
+      const randomRotY = (Math.sin(index * 2.3) * 0.12);
+      letterMesh.position.set(posX, 0.22, stageD / 2 + 0.12);
+      letterMesh.rotation.y = randomRotY;
+      scene.add(letterMesh);
+    });
+
+    // Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
