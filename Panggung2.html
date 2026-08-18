@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketsa 3D Panggung Expo 4x4m (Rigging + Atap Terpal Segitiga)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #canvas-container { width: 100%; height: 100%; }
+    .hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: #f8fafc;
+      background: rgba(15, 23, 42, 0.88);
+      padding: 14px 20px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      font-size: 12px;
+      pointer-events: none;
+      line-height: 1.6;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .hud b { color: #00f3ff; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div class="hud">
+    <b>PANGGUNG UTAMA EXPO 4.00 m × 4.00 m</b><br>
+    • Elevasi Lantai: <b>Tinggi 0.50 m (50 cm)</b> (Modul Knockdown)<br>
+    • Rangka Rigging: <b>Solid Box Truss F34</b> (Eaves 3.30 m | Puncak Atap 4.10 m)<br>
+    • Penutup Atap: <b>Kanopi Terpal Segitiga (Gable Roof PVC Canopy)</b><br>
+    • Tangga Akses: <b>Orientasi Belok 90° Samping Kanan (2 Trap @ 25 cm)</b><br>
+    • Fasilitas: <b>2 Subwoofer, 2 Floor Wedge Monitor, 1 Podium, Lighting PAR LED</b>
+  </div>
+  <div id="canvas-container"></div>
+
+  <script>
+    const container = document.getElementById('canvas-container');
+
+    // 1. Scene Setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b0f19');
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(8.0, 6.2, 9.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 1.4, 0);
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+    // 2. Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.35);
+    dirLight.position.set(10, 16, 9);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.65);
+    rimLight.position.set(-9, 8, -7);
+    scene.add(rimLight);
+
+    // Floor Grid
+    const grid = new THREE.GridHelper(16, 16, 0x00f3ff, 0x1e293b);
+    scene.add(grid);
+
+    // 3. Materials
+    const matTrussAlu = new THREE.MeshStandardMaterial({
+      color: 0xd4d4d8,
+      metalness: 0.9,
+      roughness: 0.25
+    });
+
+    const matTrussCorner = new THREE.MeshStandardMaterial({
+      color: 0x71717a,
+      metalness: 0.85,
+      roughness: 0.3
+    });
+
+    const matBasePlate = new THREE.MeshStandardMaterial({
+      color: 0x27272a,
+      metalness: 0.8,
+      roughness: 0.4
+    });
+
+    // Material Terpal Segitiga (Translucent Satin PVC Fabric)
+    const matTarpRoof = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.35,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide
+    });
+
+    const matStageTop = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+    const matCarpet = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+    const matSpeaker = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6, metalness: 0.2 });
+    const matPodium = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4 });
+    const matStairs = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+    const matParCan = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.4, metalness: 0.7 });
+    const matParLens = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.7 });
+
+    const lineEdgeMat = new THREE.LineBasicMaterial({ color: 0x00f3ff, linewidth: 1.5 });
+    const lineDarkEdge = new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 1.2 });
+    const lineTarpEdge = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+
+    function createWireMesh(geo, mat, edgeMat = lineEdgeMat) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, edgeMat);
+      mesh.add(line);
+      return mesh;
+    }
+
+    // 4. STRUKTUR PANGGUNG (4.00 m × 4.00 m × 0.50 m)
+    const stageW = 4.0, stageD = 4.0, stageH = 0.5;
+    const stage = createWireMesh(new THREE.BoxGeometry(stageW, stageH, stageD), matStageTop, lineEdgeMat);
+    stage.position.set(0, stageH / 2, 0);
+    scene.add(stage);
+
+    // Karpet Area Tengah
+    const carpet = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), matCarpet);
+    carpet.rotation.x = -Math.PI / 2;
+    carpet.position.set(0, stageH + 0.002, 0);
+    carpet.receiveShadow = true;
+    scene.add(carpet);
+
+    // 5. GENERATOR RANGKA RIGGING SOLID 3D (SQUARE BOX TRUSS)
+    function createBoxTrussSection(length, size = 0.28) {
+      const group = new THREE.Group();
+      const halfS = size / 2;
+      const mainTubeRadius = 0.018;
+      const braceRadius = 0.007;
+
+      const mainTubeGeo = new THREE.CylinderGeometry(mainTubeRadius, mainTubeRadius, length, 8);
+      const chords = [
+        [-halfS, -halfS],
+        [ halfS, -halfS],
+        [ halfS,  halfS],
+        [-halfS,  halfS]
+      ];
+
+      chords.forEach(([cx, cz]) => {
+        const chord = new THREE.Mesh(mainTubeGeo, matTrussAlu);
+        chord.position.set(cx, 0, cz);
+        chord.castShadow = true;
+        group.add(chord);
+      });
+
+      const steps = Math.max(3, Math.round(length / 0.35));
+      const stepLen = length / steps;
+      const startY = -length / 2;
+
+      for (let i = 0; i < steps; i++) {
+        const y1 = startY + (i * stepLen);
+        const y2 = startY + ((i + 1) * stepLen);
+
+        for (let s = 0; s < 4; s++) {
+          const [x1, z1] = chords[s];
+          const [x2, z2] = chords[(s + 1) % 4];
+
+          const p1 = new THREE.Vector3(x1, (i % 2 === 0 ? y1 : y2), z1);
+          const p2 = new THREE.Vector3(x2, (i % 2 === 0 ? y2 : y1), z2);
+          const dist = p1.distanceTo(p2);
+
+          const braceGeo = new THREE.CylinderGeometry(braceRadius, braceRadius, dist, 6);
+          const brace = new THREE.Mesh(braceGeo, matTrussAlu);
+          
+          const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+          brace.position.copy(midPoint);
+          brace.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(p1).normalize());
+          brace.castShadow = true;
+          group.add(brace);
+
+          if (i > 0) {
+            const hDist = Math.hypot(x2 - x1, z2 - z1);
+            const hGeo = new THREE.CylinderGeometry(braceRadius, braceRadius, hDist, 6);
+            const hBar = new THREE.Mesh(hGeo, matTrussAlu);
+            const hMid = new THREE.Vector3((x1 + x2) / 2, y1, (z1 + z2) / 2);
+            hBar.position.copy(hMid);
+            hBar.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(x2 - x1, 0, z2 - z1).normalize());
+            group.add(hBar);
+          }
+        }
+      }
+      return group;
+    }
+
+    // 6. PERAKITAN RANGKA RIGGING 4 TIANG & BALOK KELILING
+    const trussH = 3.30;
+    const trussSpan = 3.70;
+    const cornerOffset = trussSpan / 2; // 1.85 m
+
+    const cornerCoords = [
+      [-cornerOffset, -cornerOffset], // Belakang Kiri
+      [ cornerOffset, -cornerOffset], // Belakang Kanan
+      [ cornerOffset,  cornerOffset], // Depan Kanan
+      [-cornerOffset,  cornerOffset]  // Depan Kiri
+    ];
+
+    // A. 4 Tiang Box Truss Vertikal + Base Plate
+    cornerCoords.forEach(([cx, cz]) => {
+      const basePlate = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.025, 0.55), matBasePlate);
+      basePlate.position.set(cx, 0.0125, cz);
+      basePlate.receiveShadow = true;
+      scene.add(basePlate);
+
+      const pillar = createBoxTrussSection(trussH - 0.28);
+      pillar.position.set(cx, (trussH - 0.28) / 2 + 0.02, cz);
+      scene.add(pillar);
+
+      const cornerBox = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), matTrussCorner);
+      cornerBox.position.set(cx, trussH - 0.14, cz);
+      cornerBox.castShadow = true;
+      scene.add(cornerBox);
+    });
+
+    // B. Balok Ring Horisontal (4 Balok Atas)
+    const beamLen = trussSpan - 0.32;
+    [-cornerOffset, cornerOffset].forEach(cz => {
+      const beamX = createBoxTrussSection(beamLen);
+      beamX.rotation.z = Math.PI / 2;
+      beamX.position.set(0, trussH - 0.14, cz);
+      scene.add(beamX);
+    });
+
+    [-cornerOffset, cornerOffset].forEach(cx => {
+      const beamZ = createBoxTrussSection(beamLen);
+      beamZ.rotation.x = Math.PI / 2;
+      beamZ.position.set(cx, trussH - 0.14, 0);
+      scene.add(beamZ);
+    });
+
+    // 7. RANGKA KUDA-KUDA SEGITIGA & KANOPI TERPAL (GABLE ROOF)
+    const peakH = 4.10; // Tinggi bubungan puncak atap
+    const ridgeZSpan = trussSpan;
+
+    // A. Kuda-kuda Segitiga Depan & Belakang (Truss Rafters)
+    [-cornerOffset, cornerOffset].forEach(cz => {
+      const pL = new THREE.Vector3(-cornerOffset, trussH, cz);
+      const pR = new THREE.Vector3( cornerOffset, trussH, cz);
+      const pPeak = new THREE.Vector3(0, peakH, cz);
+
+      // Batang Rafter Kiri & Kanan
+      [ [pL, pPeak], [pR, pPeak] ].forEach(([start, end]) => {
+        const dist = start.distanceTo(end);
+        const rafter = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, dist, 8), matTrussAlu);
+        const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+        rafter.position.copy(mid);
+        rafter.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), end.clone().sub(start).normalize());
+        scene.add(rafter);
+      });
+
+      // Tiang Vertikal Tengah Segitiga
+      const centerPostGeo = new THREE.CylinderGeometry(0.016, 0.016, peakH - trussH, 8);
+      const centerPost = new THREE.Mesh(centerPostGeo, matTrussAlu);
+      centerPost.position.set(0, (peakH + trussH) / 2, cz);
+      scene.add(centerPost);
+    });
+
+    // B. Balok Bubungan Puncak Atas (Ridge Beam Tube)
+    const ridgeBeamGeo = new THREE.CylinderGeometry(0.025, 0.025, ridgeZSpan + 0.2, 8);
+    const ridgeBeam = new THREE.Mesh(ridgeBeamGeo, matTrussAlu);
+    ridgeBeam.rotation.x = Math.PI / 2;
+    ridgeBeam.position.set(0, peakH, 0);
+    scene.add(ridgeBeam);
+
+    // C. Panel Kain Terpal Segitiga (Bidang Atap Kiri & Kanan)
+    const tarpOverhang = 0.15; // Lidah terpal keluar sedikit dari rangka
+    const tL = -cornerOffset - tarpOverhang;
+    const tR =  cornerOffset + tarpOverhang;
+    const tF =  cornerOffset + tarpOverhang;
+    const tB = -cornerOffset - tarpOverhang;
+    const tEavesH = trussH + 0.05;
+    const tPeakH = peakH + 0.05;
+
+    // Sayap Terpal Kiri
+    const tarpGeoLeft = new THREE.BufferGeometry();
+    tarpGeoLeft.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      tL, tEavesH, tB,    0, tPeakH, tB,    0, tPeakH, tF,
+      tL, tEavesH, tB,    0, tPeakH, tF,    tL, tEavesH, tF
+    ]), 3));
+    tarpGeoLeft.computeVertexNormals();
+    const tarpMeshLeft = createWireMesh(tarpGeoLeft, matTarpRoof, lineTarpEdge);
+    scene.add(tarpMeshLeft);
+
+    // Sayap Terpal Kanan
+    const tarpGeoRight = new THREE.BufferGeometry();
+    tarpGeoRight.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      0, tPeakH, tB,    tR, tEavesH, tB,    tR, tEavesH, tF,
+      0, tPeakH, tB,    tR, tEavesH, tF,    0, tPeakH, tF
+    ]), 3));
+    tarpGeoRight.computeVertexNormals();
+    const tarpMeshRight = createWireMesh(tarpGeoRight, matTarpRoof, lineTarpEdge);
+    scene.add(tarpMeshRight);
+
+    // Terpal Segitiga Belakang (Gable End Back Cover)
+    const tarpGeoGable = new THREE.BufferGeometry();
+    tarpGeoGable.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      tL, tEavesH, tB,   0, tPeakH, tB,   tR, tEavesH, tB
+    ]), 3));
+    tarpGeoGable.computeVertexNormals();
+    const tarpMeshGable = createWireMesh(tarpGeoGable, matTarpRoof, lineTarpEdge);
+    scene.add(tarpMeshGable);
+
+    // 8. LAMPU PAR LED LIGHTING (Tergantung di Balok Depan)
+    [-1.0, 0, 1.0].forEach(lx => {
+      const lightGroup = new THREE.Group();
+      
+      const clamp = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.08), matTrussCorner);
+      lightGroup.add(clamp);
+
+      const can = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.11, 0.22, 12), matParCan);
+      can.rotation.x = Math.PI / 3;
+      can.position.set(0, -0.12, 0.04);
+      can.castShadow = true;
+      lightGroup.add(can);
+
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.095, 12), matParLens);
+      lens.rotation.x = -Math.PI / 6;
+      lens.position.set(0, -0.21, 0.09);
+      lightGroup.add(lens);
+
+      lightGroup.position.set(lx, trussH - 0.28, cornerOffset - 0.14);
+      scene.add(lightGroup);
+    });
+
+    // 9. SOUND SYSTEM & MONITORING
+    // A. Subwoofer Standing Luar (Kiri & Kanan)
+    [-2.55, 2.55].forEach(x => {
+      const sub = createWireMesh(new THREE.BoxGeometry(0.7, 0.85, 0.65), matSpeaker, lineEdgeMat);
+      sub.position.set(x, 0.425, 0.8);
+      scene.add(sub);
+    });
+
+    // B. Floor Wedge Monitor (Depan Kiri & Kanan)
+    [-1.2, 1.2].forEach(x => {
+      const wedgeGroup = new THREE.Group();
+      const wedge = createWireMesh(new THREE.BoxGeometry(0.5, 0.2, 0.3), matSpeaker, lineEdgeMat);
+      wedge.rotation.x = -0.35;
+      wedgeGroup.add(wedge);
+      wedgeGroup.position.set(x, stageH + 0.1, 1.45);
+      scene.add(wedgeGroup);
+    });
+
+    // 10. MIMBAR / PODIUM PIDATO (Kiri Depan)
+    const podiumGroup = new THREE.Group();
+    const podiumBody = createWireMesh(new THREE.BoxGeometry(0.45, 0.95, 0.35), matPodium, lineDarkEdge);
+    podiumBody.position.set(0, 0.475, 0);
+    podiumGroup.add(podiumBody);
+
+    const micStemGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0.95, 0),
+      new THREE.Vector3(0, 1.2, 0.04)
+    ]);
+    podiumGroup.add(new THREE.Line(micStemGeo, new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 })));
+    podiumGroup.position.set(-1.25, stageH, 0.4);
+    scene.add(podiumGroup);
+
+    // 11. TANGGA AKSES BELOK 90 DERAJAT (2 Trap @ 25 cm Sisi Kanan)
+    const stairSteps = 2;
+    const stairDepth = 0.32;  // Arah X
+    const stairWidth = 0.80;  // Arah Z
+    const startX = stageW / 2; // X = 2.0 m
+    const stairZ = -0.3;
+
+    for (let i = 0; i < stairSteps; i++) {
+      const stepH = (stageH / stairSteps) * (stairSteps - i);
+      const stepGeo = new THREE.BoxGeometry(stairDepth, stepH, stairWidth);
+      const stepMesh = createWireMesh(stepGeo, matStairs, lineDarkEdge);
+      stepMesh.position.set(startX + (stairDepth / 2) + (i * stairDepth), stepH / 2, stairZ);
+      scene.add(stepMesh);
+    }
+
+    // Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
