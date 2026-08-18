@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketsa 3D Panggung Utama Expo 4x4m (Open Stage 0.5m)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #canvas-container { width: 100%; height: 100%; }
+    .hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: #f8fafc;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      font-size: 12px;
+      pointer-events: none;
+      line-height: 1.5;
+    }
+    .hud b { color: #00f3ff; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div class="hud">
+    <b>PANGGUNG UTAMA EXPO 4.00 m × 4.00 m</b> (Open Stage Format)<br>
+    • Elevasi Lantai: <b>Tinggi 0.50 m (50 cm)</b> (Modul Knockdown / Podium Rendah)<br>
+    • Desain Visual: <b>Open Backdrop</b> (Tanpa Rangka Rigging / Tanpa Banner Belakang)<br>
+    • Tangga Akses: <b>Orientasi Belok 90° Samping Kanan</b> (2 Trap @ 25 cm)<br>
+    • Tata Suara & Fasilitas: <b>2 Subwoofer Luar, 2 Floor Wedge Monitor, 1 Mimbar Pidato</b>
+  </div>
+  <div id="canvas-container"></div>
+
+  <script>
+    const container = document.getElementById('canvas-container');
+
+    // 1. Scene Setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b0f19');
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(7.0, 5.5, 8.0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 0.8, 0);
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+    // 2. Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+    dirLight.position.set(8, 12, 8);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.4);
+    fillLight.position.set(-7, 5, -5);
+    scene.add(fillLight);
+
+    // Floor Grid
+    const grid = new THREE.GridHelper(14, 14, 0x00f3ff, 0x1e293b);
+    scene.add(grid);
+
+    // 3. Materials
+    const matStageTop = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+    const matCarpet = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+    const matSpeaker = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6, metalness: 0.2 });
+    const matPodium = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.4 });
+    const matStairs = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+
+    const lineEdgeMat = new THREE.LineBasicMaterial({ color: 0x00f3ff, linewidth: 1.5 });
+    const lineDarkEdge = new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 1.2 });
+    const lineAccent = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+
+    function createWireMesh(geo, mat, edgeMat = lineEdgeMat) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, edgeMat);
+      mesh.add(line);
+      return mesh;
+    }
+
+    // 4. STRUKTUR PANGGUNG UTAMA (4.00 m × 4.00 m × 0.50 m)
+    const stageW = 4.0, stageD = 4.0, stageH = 0.5;
+    const stage = createWireMesh(
+      new THREE.BoxGeometry(stageW, stageH, stageD),
+      matStageTop,
+      lineEdgeMat
+    );
+    stage.position.set(0, stageH / 2, 0);
+    scene.add(stage);
+
+    // Karpet Area Panggung (3.40 m × 3.40 m)
+    const carpetGeo = new THREE.PlaneGeometry(3.4, 3.4);
+    const carpet = new THREE.Mesh(carpetGeo, matCarpet);
+    carpet.rotation.x = -Math.PI / 2;
+    carpet.position.set(0, stageH + 0.002, 0);
+    carpet.receiveShadow = true;
+    scene.add(carpet);
+
+    // 5. SOUND SYSTEM & MONITORING
+    // A. Subwoofer Standing (Luar Sisi Panggung Kiri & Kanan)
+    [-2.55, 2.55].forEach(x => {
+      const subGeo = new THREE.BoxGeometry(0.7, 0.85, 0.65);
+      const subMesh = createWireMesh(subGeo, matSpeaker, lineEdgeMat);
+      subMesh.position.set(x, 0.425, 0.8);
+      scene.add(subMesh);
+    });
+
+    // B. Floor Wedge Monitor (Depan Kiri & Kanan Panggung)
+    [-1.2, 1.2].forEach(x => {
+      const wedgeGroup = new THREE.Group();
+      const wedgeMesh = createWireMesh(new THREE.BoxGeometry(0.5, 0.2, 0.3), matSpeaker, lineEdgeMat);
+      wedgeMesh.rotation.x = -0.35;
+      wedgeGroup.add(wedgeMesh);
+      wedgeGroup.position.set(x, stageH + 0.1, 1.45);
+      scene.add(wedgeGroup);
+    });
+
+    // 6. MIMBAR / PODIUM PIDATO (Sisi Kiri Depan)
+    const podiumGroup = new THREE.Group();
+    const podiumBody = createWireMesh(new THREE.BoxGeometry(0.45, 0.95, 0.35), matPodium, lineDarkEdge);
+    podiumBody.position.set(0, 0.475, 0);
+    podiumGroup.add(podiumBody);
+
+    const micStemGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0.95, 0),
+      new THREE.Vector3(0, 1.2, 0.04)
+    ]);
+    podiumGroup.add(new THREE.Line(micStemGeo, lineAccent));
+    podiumGroup.position.set(-1.25, stageH, 0.4);
+    scene.add(podiumGroup);
+
+    // 7. TANGGA AKSES BELOK 90 DERAJAT (2 Trap untuk Elevasi 0.50 m)
+    const stairSteps = 2;
+    const stairDepth = 0.32;  // Lebar tapak langkah (arah X)
+    const stairWidth = 0.80;  // Panjang trap tangga (arah Z)
+    const startX = stageW / 2; // Menempel di bibir kanan panggung (X = 2.0)
+    const stairZ = -0.3;      // Posisi tangga di sisi samping
+
+    for (let i = 0; i < stairSteps; i++) {
+      const stepH = (stageH / stairSteps) * (stairSteps - i);
+      const stepGeo = new THREE.BoxGeometry(stairDepth, stepH, stairWidth);
+      const stepMesh = createWireMesh(stepGeo, matStairs, lineDarkEdge);
+      // Tangga menurun ke arah luar kanan (+X) menghadap panggung (-X)
+      stepMesh.position.set(startX + (stairDepth / 2) + (i * stairDepth), stepH / 2, stairZ);
+      scene.add(stepMesh);
+    }
+
+    // Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
