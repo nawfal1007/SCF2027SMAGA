@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketsa 3D Welcome Gate SCF 2027 (4.00m x 3.20m)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #canvas-container { width: 100%; height: 100%; }
+    .hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: #f8fafc;
+      background: rgba(15, 23, 42, 0.88);
+      padding: 14px 20px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      font-size: 12px;
+      pointer-events: none;
+      line-height: 1.6;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .hud b { color: #00f3ff; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div class="hud">
+    <b>DATA DIMENSI & UKURAN</b><br>
+    • Total Luar: <b>4.00 m × 3.20 m × 0.60 m</b><br>
+    • Bukaan Akses: <b>2.80 m × 2.60 m</b><br>
+    • Dimensi Pilar (2x): <b>0.60 m × 2.60 m × 0.60 m</b><br>
+    • Dimensi Balok Atas: <b>4.00 m × 0.60 m × 0.60 m</b><br>
+    • Batang Kaso: <b>0.05 m × 0.05 m (5 cm × 5 cm)</b><br>
+    • Penyangga Belakang: <b>1.30 m × 2.00 m</b><br>
+    • Jarak Antar Unit: <b>5.60 m</b>
+  </div>
+  <div id="canvas-container"></div>
+
+  <script>
+    const container = document.getElementById('canvas-container');
+
+    // 1. Scene Setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b0f19');
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 4.8, 10.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 1.5, 0);
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+    // 2. Lighting Setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffaed, 1.3);
+    dirLight.position.set(10, 14, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.5);
+    fillLight.position.set(-10, 8, -8);
+    scene.add(fillLight);
+
+    // Floor Grid
+    const grid = new THREE.GridHelper(20, 20, 0x00f3ff, 0x1e293b);
+    scene.add(grid);
+
+    // 3. Texture Generator Banner SCF 2027 (Clean Royal Navy Blue & Slot Sponsor)
+    function createGateBannerTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2000;
+      canvas.height = 1600;
+      const ctx = canvas.getContext('2d');
+
+      // Base Background Gradient
+      const grad = ctx.createLinearGradient(0, 0, 2000, 1600);
+      grad.addColorStop(0, '#0c4a6e');
+      grad.addColorStop(0.4, '#0284c7');
+      grad.addColorStop(1, '#082f49');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 2000, 1600);
+
+      // Pola Geometris Halus
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+      ctx.lineWidth = 3;
+      for (let x = 0; x <= 2000; x += 100) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 1600);
+        ctx.stroke();
+      }
+
+      // Garis Border List Emas
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 14;
+      ctx.strokeRect(20, 20, 1960, 1560);
+
+      // --- HEADER ATAS (4.00 m × 0.60 m -> Y: 0 s.d 300 px) ---
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 92px -apple-system, sans-serif';
+      ctx.fillText('SCF 2027', 1000, 100);
+
+      ctx.fillStyle = '#00f3ff';
+      ctx.font = 'bold 40px -apple-system, sans-serif';
+      ctx.fillText('SMAGA CAMPUS FESTIVAL', 1000, 165);
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = 'bold 26px -apple-system, sans-serif';
+      ctx.fillText('[ belom ada tema + design ]', 1000, 220);
+
+      // --- SLOT SPONSOR PILAR KIRI & KANAN (Y: 300 s.d 1600 px) ---
+      const drawSponsorSlots = (xCenter) => {
+        for (let y = 370; y <= 1380; y += 170) {
+          // Kotak Putih Sponsor
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(xCenter - 115, y, 230, 115, 14);
+          ctx.fill();
+
+          ctx.strokeStyle = '#0284c7';
+          ctx.lineWidth = 4;
+          ctx.stroke();
+
+          // Teks SPONSOR
+          ctx.fillStyle = '#0369a1';
+          ctx.font = 'bold 30px -apple-system, sans-serif';
+          ctx.fillText('SPONSOR', xCenter, y + 58);
+        }
+      };
+
+      drawSponsorSlots(150);  // Pilar Kiri (X: 0 - 300 px)
+      drawSponsorSlots(1850); // Pilar Kanan (X: 1700 - 2000 px)
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = 4;
+      return texture;
+    }
+
+    // 4. Materials
+    const matWoodKaso = new THREE.MeshStandardMaterial({
+      color: 0xb45309,
+      roughness: 0.75,
+      metalness: 0.05
+    });
+
+    const matWoodBrace = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      roughness: 0.8
+    });
+
+    const matSolidCoverBlue = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.4,
+      metalness: 0.1
+    });
+
+    const matBannerFront = new THREE.MeshStandardMaterial({
+      map: createGateBannerTexture(),
+      roughness: 0.35,
+      metalness: 0.1
+    });
+
+    const matSupportWood = new THREE.MeshStandardMaterial({
+      color: 0x78350f,
+      roughness: 0.85
+    });
+
+    const lineCyan = new THREE.LineBasicMaterial({ color: 0x00f3ff, linewidth: 1.5 });
+    const lineRed = new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 1.5 });
+    const lineDark = new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 1.2 });
+    const lineDim = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 1.5 });
+
+    function createWireMesh(geo, mat, edgeMat = lineDark) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, edgeMat);
+      mesh.add(line);
+      return mesh;
+    }
+
+    // 5. PARAMETER DIMENSI GATE
+    const kasoSize = 0.05;
+    const totalW = 4.00;
+    const totalH = 3.20;
+    const gateDepth = 0.60;
+    const pillarW = 0.60;
+    const pillarH = 2.60;
+    const beamH = 0.60;
+    const pillarCenterX = (totalW / 2) - (pillarW / 2); // 1.70 m
+
+    // Penyangga Segitiga Belakang
+    function createRearTriangleBrace(posX) {
+      const braceGroup = new THREE.Group();
+      const baseFootLen = 1.30;
+      const attachHeight = 2.00;
+      const halfPillarD = gateDepth / 2;
+
+      const baseGeo = new THREE.BoxGeometry(0.06, 0.04, baseFootLen);
+      const baseMesh = createWireMesh(baseGeo, matSupportWood, lineDark);
+      baseMesh.position.set(0, 0.02, -halfPillarD - (baseFootLen / 2));
+      braceGroup.add(baseMesh);
+
+      const strutLen = Math.hypot(attachHeight, baseFootLen);
+      const angle = Math.atan2(baseFootLen, attachHeight);
+
+      const strutGeo = new THREE.BoxGeometry(0.06, strutLen, 0.05);
+      const strutMesh = createWireMesh(strutGeo, matSupportWood, lineDark);
+      strutMesh.position.set(0, attachHeight / 2, -halfPillarD - (baseFootLen / 2));
+      strutMesh.rotation.x = -angle;
+      braceGroup.add(strutMesh);
+
+      const midTieGeo = new THREE.BoxGeometry(0.05, 0.04, baseFootLen * 0.5);
+      const midTieMesh = createWireMesh(midTieGeo, matSupportWood, lineDark);
+      midTieMesh.position.set(0, attachHeight * 0.45, -halfPillarD - (baseFootLen * 0.25));
+      braceGroup.add(midTieMesh);
+
+      braceGroup.position.set(posX, 0, 0);
+      return braceGroup;
+    }
+
+    // =========================================================================
+    // UNIT 1: KERANGKA KASO BOX (SISI KIRI - X = -2.80 m)
+    // =========================================================================
+    const unit1Group = new THREE.Group();
+
+    function createBoxPillarSkeleton(w, h, d, numBraces = 5) {
+      const group = new THREE.Group();
+      const halfW = w / 2 - kasoSize / 2;
+      const halfD = d / 2 - kasoSize / 2;
+
+      [[-halfW, -halfD], [halfW, -halfD], [halfW, halfD], [-halfW, halfD]].forEach(([cx, cz]) => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(kasoSize, h, kasoSize), matWoodKaso);
+        post.position.set(cx, h / 2, cz);
+        post.castShadow = true;
+        group.add(post);
+      });
+
+      const stepH = h / numBraces;
+      for (let i = 0; i <= numBraces; i++) {
+        const curY = i * stepH;
+
+        const ringGeoX = new THREE.BoxGeometry(w, kasoSize, kasoSize);
+        const r1 = new THREE.Mesh(ringGeoX, matWoodKaso);
+        r1.position.set(0, Math.min(curY + kasoSize/2, h - kasoSize/2), halfD);
+        const r2 = new THREE.Mesh(ringGeoX, matWoodKaso);
+        r2.position.set(0, Math.min(curY + kasoSize/2, h - kasoSize/2), -halfD);
+        group.add(r1, r2);
+
+        const ringGeoZ = new THREE.BoxGeometry(kasoSize, kasoSize, d - (kasoSize * 2));
+        const r3 = new THREE.Mesh(ringGeoZ, matWoodKaso);
+        r3.position.set(halfW, Math.min(curY + kasoSize/2, h - kasoSize/2), 0);
+        const r4 = new THREE.Mesh(ringGeoZ, matWoodKaso);
+        r4.position.set(-halfW, Math.min(curY + kasoSize/2, h - kasoSize/2), 0);
+        group.add(r3, r4);
+
+        if (i < numBraces) {
+          const nextY = (i + 1) * stepH;
+          const diagLen = Math.hypot(w, stepH);
+          const angle = Math.atan2(stepH, w);
+
+          const diag1 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, kasoSize * 0.8, kasoSize * 0.5), matWoodBrace);
+          diag1.position.set(0, (curY + nextY) / 2, halfD - kasoSize / 2);
+          diag1.rotation.z = (i % 2 === 0 ? angle : -angle);
+          group.add(diag1);
+
+          const diag2 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, kasoSize * 0.8, kasoSize * 0.5), matWoodBrace);
+          diag2.position.set(0, (curY + nextY) / 2, -halfD + kasoSize / 2);
+          diag2.rotation.z = (i % 2 === 0 ? -angle : angle);
+          group.add(diag2);
+        }
+      }
+      return group;
+    }
+
+    function createBoxBeamSkeleton(w, h, d, numSegments = 7) {
+      const group = new THREE.Group();
+      const halfY = h / 2 - kasoSize / 2;
+      const halfD = d / 2 - kasoSize / 2;
+
+      [[-halfY, -halfD], [halfY, -halfD], [halfY, halfD], [-halfY, halfD]].forEach(([cy, cz]) => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(w, kasoSize, kasoSize), matWoodKaso);
+        post.position.set(0, cy, cz);
+        group.add(post);
+      });
+
+      const stepW = w / numSegments;
+      const startX = -w / 2;
+      for (let i = 0; i <= numSegments; i++) {
+        const curX = startX + (i * stepW);
+
+        const ringGeoY = new THREE.BoxGeometry(kasoSize, h, kasoSize);
+        const ry1 = new THREE.Mesh(ringGeoY, matWoodKaso);
+        ry1.position.set(Math.max(-w/2 + kasoSize/2, Math.min(w/2 - kasoSize/2, curX)), 0, halfD);
+        const ry2 = new THREE.Mesh(ringGeoY, matWoodKaso);
+        ry2.position.set(Math.max(-w/2 + kasoSize/2, Math.min(w/2 - kasoSize/2, curX)), 0, -halfD);
+        group.add(ry1, ry2);
+
+        const ringGeoZ = new THREE.BoxGeometry(kasoSize, kasoSize, d - (kasoSize * 2));
+        const rz1 = new THREE.Mesh(ringGeoZ, matWoodKaso);
+        rz1.position.set(Math.max(-w/2 + kasoSize/2, Math.min(w/2 - kasoSize/2, curX)), halfY, 0);
+        const rz2 = new THREE.Mesh(ringGeoZ, matWoodKaso);
+        rz2.position.set(Math.max(-w/2 + kasoSize/2, Math.min(w/2 - kasoSize/2, curX)), -halfY, 0);
+        group.add(rz1, rz2);
+
+        if (i < numSegments) {
+          const nextX = curX + stepW;
+          const diagLen = Math.hypot(stepW, h);
+          const angle = Math.atan2(h, stepW);
+
+          const diagF = new THREE.Mesh(new THREE.BoxGeometry(diagLen, kasoSize * 0.8, kasoSize * 0.5), matWoodBrace);
+          diagF.position.set((curX + nextX) / 2, 0, halfD - kasoSize / 2);
+          diagF.rotation.z = (i % 2 === 0 ? angle : -angle);
+          group.add(diagF);
+
+          const diagB = new THREE.Mesh(new THREE.BoxGeometry(diagLen, kasoSize * 0.8, kasoSize * 0.5), matWoodBrace);
+          diagB.position.set((curX + nextX) / 2, 0, -halfD + kasoSize / 2);
+          diagB.rotation.z = (i % 2 === 0 ? -angle : angle);
+          group.add(diagB);
+        }
+      }
+      return group;
+    }
+
+    const leftPillarSkel = createBoxPillarSkeleton(pillarW, pillarH, gateDepth, 5);
+    leftPillarSkel.position.set(-pillarCenterX, 0, 0);
+    unit1Group.add(leftPillarSkel);
+
+    const rightPillarSkel = createBoxPillarSkeleton(pillarW, pillarH, gateDepth, 5);
+    rightPillarSkel.position.set(pillarCenterX, 0, 0);
+    unit1Group.add(rightPillarSkel);
+
+    const topBeamSkel = createBoxBeamSkeleton(totalW, beamH, gateDepth, 7);
+    topBeamSkel.position.set(0, pillarH + (beamH / 2), 0);
+    unit1Group.add(topBeamSkel);
+
+    unit1Group.add(createRearTriangleBrace(-pillarCenterX));
+    unit1Group.add(createRearTriangleBrace(pillarCenterX));
+
+    unit1Group.position.set(-2.80, 0, 0);
+    scene.add(unit1Group);
+
+    // =========================================================================
+    // UNIT 2: UNIT JADI TERTUTUP PENUH & BANNER MUKA (SISI KANAN - X = +2.80 m)
+    // =========================================================================
+    const unit2Group = new THREE.Group();
+
+    // Badan Solid Pilar Kiri (Menutup Sisi Luar, Dalam, Belakang)
+    const solidLeftPillar = createWireMesh(new THREE.BoxGeometry(pillarW, pillarH, gateDepth), matSolidCoverBlue, lineDark);
+    solidLeftPillar.position.set(-pillarCenterX, pillarH / 2, 0);
+    unit2Group.add(solidLeftPillar);
+
+    // Badan Solid Pilar Kanan
+    const solidRightPillar = createWireMesh(new THREE.BoxGeometry(pillarW, pillarH, gateDepth), matSolidCoverBlue, lineDark);
+    solidRightPillar.position.set(pillarCenterX, pillarH / 2, 0);
+    unit2Group.add(solidRightPillar);
+
+    // Badan Solid Balok Atas
+    const solidTopBeam = createWireMesh(new THREE.BoxGeometry(totalW, beamH, gateDepth), matSolidCoverBlue, lineDark);
+    solidTopBeam.position.set(0, pillarH + (beamH / 2), 0);
+    unit2Group.add(solidTopBeam);
+
+    // Lembaran Banner Muka Depan
+    // A. Muka Atas
+    const frontTopBannerGeo = new THREE.PlaneGeometry(totalW, beamH);
+    frontTopBannerGeo.attributes.uv.setXY(0, 0, 1);
+    frontTopBannerGeo.attributes.uv.setXY(1, 1, 1);
+    frontTopBannerGeo.attributes.uv.setXY(2, 0, 0.8125);
+    frontTopBannerGeo.attributes.uv.setXY(3, 1, 0.8125);
+    const frontTopBanner = new THREE.Mesh(frontTopBannerGeo, matBannerFront);
+    frontTopBanner.position.set(0, pillarH + beamH / 2, gateDepth / 2 + 0.003);
+    unit2Group.add(frontTopBanner);
+
+    // B. Muka Pilar Kiri
+    const frontLeftBannerGeo = new THREE.PlaneGeometry(pillarW, pillarH);
+    frontLeftBannerGeo.attributes.uv.setXY(0, 0, 0.8125);
+    frontLeftBannerGeo.attributes.uv.setXY(1, 0.15, 0.8125);
+    frontLeftBannerGeo.attributes.uv.setXY(2, 0, 0);
+    frontLeftBannerGeo.attributes.uv.setXY(3, 0.15, 0);
+    const frontLeftBanner = new THREE.Mesh(frontLeftBannerGeo, matBannerFront);
+    frontLeftBanner.position.set(-pillarCenterX, pillarH / 2, gateDepth / 2 + 0.003);
+    unit2Group.add(frontLeftBanner);
+
+    // C. Muka Pilar Kanan
+    const frontRightBannerGeo = new THREE.PlaneGeometry(pillarW, pillarH);
+    frontRightBannerGeo.attributes.uv.setXY(0, 0.85, 0.8125);
+    frontRightBannerGeo.attributes.uv.setXY(1, 1, 0.8125);
+    frontRightBannerGeo.attributes.uv.setXY(2, 0, 0);
+    frontRightBannerGeo.attributes.uv.setXY(3, 1, 0);
+    const frontRightBanner = new THREE.Mesh(frontRightBannerGeo, matBannerFront);
+    frontRightBanner.position.set(pillarCenterX, pillarH / 2, gateDepth / 2 + 0.003);
+    unit2Group.add(frontRightBanner);
+
+    unit2Group.add(createRearTriangleBrace(-pillarCenterX));
+    unit2Group.add(createRearTriangleBrace(pillarCenterX));
+
+    unit2Group.position.set(2.80, 0, 0);
+    scene.add(unit2Group);
+
+    // =========================================================================
+    // GARIS INDIKATOR DIMENSI TEKNIS (PADA UNIT 2)
+    // =========================================================================
+    const dimTotalW = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(2.80 - totalW / 2, totalH + 0.15, gateDepth / 2),
+      new THREE.Vector3(2.80 + totalW / 2, totalH + 0.15, gateDepth / 2)
+    ]);
+    scene.add(new THREE.Line(dimTotalW, lineRed));
+
+    const dimClearW = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(2.80 - 1.40, 0.35, gateDepth / 2 + 0.05),
+      new THREE.Vector3(2.80 + 1.40, 0.35, gateDepth / 2 + 0.05)
+    ]);
+    scene.add(new THREE.Line(dimClearW, lineCyan));
+
+    const dimClearH = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(2.80 - 1.35, 0, gateDepth / 2 + 0.05),
+      new THREE.Vector3(2.80 - 1.35, pillarH, gateDepth / 2 + 0.05)
+    ]);
+    scene.add(new THREE.Line(dimClearH, lineCyan));
+
+    const dimTotalH = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(2.80 + totalW / 2 + 0.25, 0, gateDepth / 2),
+      new THREE.Vector3(2.80 + totalW / 2 + 0.25, totalH, gateDepth / 2)
+    ]);
+    scene.add(new THREE.Line(dimTotalH, lineRed));
+
+    const dimPillarW = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(2.80 + pillarCenterX - pillarW/2, -0.08, gateDepth / 2 + 0.05),
+      new THREE.Vector3(2.80 + pillarCenterX + pillarW/2, -0.08, gateDepth / 2 + 0.05)
+    ]);
+    scene.add(new THREE.Line(dimPillarW, lineDim));
+
+    // Resize Handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
